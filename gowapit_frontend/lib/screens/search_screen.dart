@@ -62,14 +62,79 @@ class _SearchScreenState extends State<SearchScreen> {
       // 3. Kuliner
       if (data['kuliner'] != null && data['kuliner']['kategori'] != null) {
         for (var cat in data['kuliner']['kategori']) {
+          String catName = cat['nama'] ?? 'Kuliner';
+
+          // A. daftar
           if (cat['daftar'] != null) {
             for (var m in cat['daftar']) {
-              String namaFile = (m['image'] ?? '').toString().split('/').last;
+              String namaItem = m['nama'] ?? m['jenis_kopi'] ?? m['nama_menu'] ?? 'Kuliner Wapit';
+              String hargaText = "";
+              if (m['harga'] is Map) {
+                hargaText = "Mulai Rp ${m['harga']['tubruk'] ?? m['harga'].values.first}";
+              } else {
+                hargaText = m['harga']?.toString() ?? '';
+              }
+              String rawImg = (m['image'] ?? m['gambar'] ?? '').toString();
+              String namaFile = rawImg.split('/').last;
               items.add({
                 'type': 'Kuliner',
-                'nama': m['nama'],
-                'deskripsi': "Harga: ${m['harga']} (${cat['nama']})",
+                'nama': namaItem,
+                'deskripsi': "Harga: $hargaText ($catName)",
                 'gambar': namaFile.isNotEmpty ? 'assets/images/$namaFile' : 'assets/images/placeholder_food.jpeg',
+                'raw': m
+              });
+            }
+          }
+
+          // B. milk_base
+          if (cat['milk_base'] != null) {
+            for (var m in cat['milk_base']) {
+              String namaItem = m['nama_menu'] ?? m['nama'] ?? 'Milk Base';
+              String hargaText = m['harga'] != null ? "Rp ${m['harga']}" : '';
+              String rawImg = (m['image'] ?? m['gambar'] ?? '').toString();
+              String namaFile = rawImg.split('/').last;
+              items.add({
+                'type': 'Kuliner',
+                'nama': namaItem,
+                'deskripsi': "Harga: $hargaText (Milk Base)",
+                'gambar': namaFile.isNotEmpty ? 'assets/images/$namaFile' : 'assets/images/placeholder_food.jpeg',
+                'raw': m
+              });
+            }
+          }
+
+          // C. menu_manual_brew
+          if (cat['menu_manual_brew'] != null) {
+            for (var m in cat['menu_manual_brew']) {
+              String namaItem = m['jenis_kopi'] ?? m['nama'] ?? 'Manual Brew';
+              String hargaText = "";
+              if (m['harga'] is Map) {
+                hargaText = "Mulai Rp ${m['harga']['v60'] ?? m['harga'].values.first}";
+              } else {
+                hargaText = m['harga']?.toString() ?? '';
+              }
+              String rawImg = (m['image'] ?? m['gambar'] ?? '').toString();
+              String namaFile = rawImg.split('/').last;
+              items.add({
+                'type': 'Kuliner',
+                'nama': namaItem,
+                'deskripsi': "Harga: $hargaText (Manual Brew)",
+                'gambar': namaFile.isNotEmpty ? 'assets/images/$namaFile' : 'assets/images/placeholder_food.jpeg',
+                'raw': m
+              });
+            }
+          }
+
+          // D. tambahan
+          if (cat['tambahan'] != null) {
+            for (var m in cat['tambahan']) {
+              String namaItem = m['nama_tambahan'] ?? m['nama'] ?? 'Tambahan';
+              String hargaText = m['harga'] != null ? "Rp ${m['harga']}" : '';
+              items.add({
+                'type': 'Kuliner',
+                'nama': namaItem,
+                'deskripsi': "Harga: $hargaText (Toping)",
+                'gambar': 'assets/images/placeholder_food.jpeg',
                 'raw': m
               });
             }
