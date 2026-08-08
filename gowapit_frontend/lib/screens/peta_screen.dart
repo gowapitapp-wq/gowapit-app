@@ -108,11 +108,16 @@ class PetaScreen extends StatelessWidget {
                   ),
                   onPressed: () async {
                     final Uri mapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=Wahana+Wisata+Alam+Jumprit+Temanggung+(WAPITT)');
-                    if (await canLaunchUrl(mapsUrl)) {
-                      await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
-                    } else {
+                    try {
+                      bool launched = await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
+                      if (!launched) {
+                        await launchUrl(mapsUrl, mode: LaunchMode.platformDefault);
+                      }
+                    } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal membuka Google Maps."), backgroundColor: Colors.red));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Membuka Google Maps: $mapsUrl")),
+                        );
                       }
                     }
                   },

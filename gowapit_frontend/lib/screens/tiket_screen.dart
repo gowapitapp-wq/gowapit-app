@@ -26,107 +26,173 @@ class _TiketPageState extends State<TiketPage> {
   }
 
   // --- LOGIKA PEMBAYARAN & PINDAH TAB ---
-  Future<void> _prosesPembayaranMidtrans(int grandTotal) async {
+  void _prosesPembayaranMidtrans(int grandTotal) {
     if (grandTotal <= 0) return;
+    _showPaymentOptionsModal(grandTotal);
+  }
+
+  void _showPaymentOptionsModal(int grandTotal) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
+        final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+        final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(color: cardColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              Text("Pilih Metode Pembayaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
+              const SizedBox(height: 8),
+              Text("Total Pembayaran: ${formatRupiah(grandTotal)}", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: primaryColor)),
+              const SizedBox(height: 20),
+
+              // 1. OPSI SIMULASI SUKSES (INSTAN)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: primaryColor, width: 1.5)),
+                leading: CircleAvatar(backgroundColor: primaryColor.withValues(alpha: 0.15), child: Icon(Icons.flash_on, color: primaryColor)),
+                title: Text("Simulasi Bayar Instan (Sukses)", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+                subtitle: const Text("Pengujian langsung tanpa bayar riil. Tiket langsung aktif.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _eksekusiSelesaiBayar(grandTotal, isSimulasi: true);
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // 2. OPSI MIDTRANS ONLINE
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
+                leading: CircleAvatar(backgroundColor: Colors.blue.shade50, child: const Icon(Icons.payment, color: Colors.blue)),
+                title: Text("Midtrans Online Gateway", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+                subtitle: const Text("Bayar via QRIS, Bank Transfer, Gopey di halaman Midtrans.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _eksekusiSelesaiBayar(grandTotal, isSimulasi: false);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _eksekusiSelesaiBayar(int grandTotal, {required bool isSimulasi}) async {
     setState(() => _isPaying = true);
 
     try {
-      final orderData = {
-        "order_id": "WPT-${DateTime.now().millisecondsSinceEpoch}", 
-        "gross_amount": grandTotal, 
-        "customer_details": {
-          "first_name": "Petualang Wapit", 
-          "email": "petualang@gmail.com"
-        }
-      };
-
-      // 1. Tembak API Backend
-      final response = await http.post(
-        ApiConfig.uri('/api/checkout'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(orderData),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final String redirectUrl = responseData['redirect_url'];
-
-        // 2. Buka halaman pembayaran Midtrans
-        final Uri paymentUri = Uri.parse(redirectUrl);
-        if (await canLaunchUrl(paymentUri)) {
-          await launchUrl(paymentUri, mode: LaunchMode.externalApplication); 
-        }
-
-        // ===========================================================
-        // 3. LOGIKA MEMINDAHKAN KERANJANG KE TAB BERHASIL (PENGGABUNGAN KULINER)
-        // ===========================================================
-        final currentRiwayat = List<Map<String, dynamic>>.from(globalRiwayat.value);
-        final currentCart = List<Map<String, dynamic>>.from(globalCart.value);
-        
-        String generatedOrderId = "INV/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
-
-        // Variabel penampung khusus untuk KULINER
-        int totalKulinerQty = 0;
-        int totalKulinerHarga = 0;
-        List<String> namaKulinerList = [];
-
-        // Evaluasi isi keranjang
-        for (var item in currentCart) {
-          int hargaItem = int.tryParse(item['harga'].toString()) ?? 0;
-          int qty = item['qty'] ?? 1;
-
-          if (item['kategori'] == 'KULINER') {
-            // Jika Kuliner, kumpulkan datanya (jangan langsung dibuatkan tiket)
-            totalKulinerQty += qty;
-            totalKulinerHarga += (hargaItem * qty);
-            namaKulinerList.add(item['nama']);
-          } else {
-            // Jika BUKAN Kuliner (Misal: Paket), buatkan tiket terpisah langsung
-            currentRiwayat.insert(0, { 
-              'kategori': item['kategori'],
-              'nama': item['nama'],
-              'tanggal_pakai': 'Berlaku Hari Ini',
-              'order_id': generatedOrderId,
-              'qty': qty,
-              'total_harga': formatRupiah(hargaItem * qty),
-              'status': 'Aktif', 
-            });
+      if (!isSimulasi) {
+        final orderData = {
+          "order_id": "WPT-${DateTime.now().millisecondsSinceEpoch}", 
+          "gross_amount": grandTotal, 
+          "customer_details": {
+            "first_name": "Petualang Wapit", 
+            "email": "petualang@gmail.com"
           }
-        }
+        };
 
-        // Jika ternyata ada pesanan Kuliner, gabungkan semuanya jadi 1 Tiket
-        if (totalKulinerQty > 0) {
-          String namaMenuGabungan = "";
-          
-          // Jika pesan 1 atau 2 menu, tuliskan namanya utuh
-          if (namaKulinerList.length <= 2) {
-            namaMenuGabungan = namaKulinerList.join(', ');
-          } 
-          // Jika pesanan lebih dari 2 jenis, berikan teks tambahan "+ X lainnya" agar UI rapi
-          else {
-            namaMenuGabungan = "${namaKulinerList[0]}, ${namaKulinerList[1]}, +${namaKulinerList.length - 2} Lainnya";
+        try {
+          final response = await http.post(
+            ApiConfig.uri('/api/checkout'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(orderData),
+          );
+
+          if (response.statusCode == 200) {
+            final responseData = jsonDecode(response.body);
+            final String? redirectUrl = responseData['redirect_url'];
+            if (redirectUrl != null && redirectUrl.isNotEmpty) {
+              final Uri paymentUri = Uri.parse(redirectUrl);
+              if (await canLaunchUrl(paymentUri)) {
+                await launchUrl(paymentUri, mode: LaunchMode.externalApplication); 
+              }
+            }
           }
+        } catch (_) {}
+      }
 
-          currentRiwayat.insert(0, {
-            'kategori': 'KULINER',
-            'nama': namaMenuGabungan,
+      // Transfer keranjang ke tab Berhasil / Riwayat E-Tiket
+      final currentRiwayat = List<Map<String, dynamic>>.from(globalRiwayat.value);
+      final currentCart = List<Map<String, dynamic>>.from(globalCart.value);
+      
+      String generatedOrderId = "INV/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
+
+      int totalKulinerQty = 0;
+      int totalKulinerHarga = 0;
+      List<String> namaKulinerList = [];
+
+      for (var item in currentCart) {
+        int hargaItem = int.tryParse(item['harga'].toString()) ?? 0;
+        int qty = item['qty'] ?? 1;
+
+        if (item['kategori'] == 'KULINER') {
+          totalKulinerQty += qty;
+          totalKulinerHarga += (hargaItem * qty);
+          namaKulinerList.add(item['nama']);
+        } else {
+          currentRiwayat.insert(0, { 
+            'kategori': item['kategori'],
+            'nama': item['nama'],
             'tanggal_pakai': 'Berlaku Hari Ini',
             'order_id': generatedOrderId,
-            'qty': totalKulinerQty,
-            'total_harga': formatRupiah(totalKulinerHarga),
-            'status': 'Aktif',
+            'qty': qty,
+            'total_harga': formatRupiah(hargaItem * qty),
+            'status': 'Aktif', 
           });
         }
+      }
 
-        // Update State
-        globalRiwayat.value = currentRiwayat; 
-        globalCart.value = []; 
-
-        if (mounted) {
-          setState(() {
-            _selectedTab = 1;
-          });
+      if (totalKulinerQty > 0) {
+        String namaMenuGabungan = "";
+        if (namaKulinerList.length <= 2) {
+          namaMenuGabungan = namaKulinerList.join(', ');
+        } else {
+          namaMenuGabungan = "${namaKulinerList[0]}, ${namaKulinerList[1]}, +${namaKulinerList.length - 2} Lainnya";
         }
+
+        currentRiwayat.insert(0, {
+          'kategori': 'KULINER',
+          'nama': namaMenuGabungan,
+          'tanggal_pakai': 'Berlaku Hari Ini',
+          'order_id': generatedOrderId,
+          'qty': totalKulinerQty,
+          'total_harga': formatRupiah(totalKulinerHarga),
+          'status': 'Aktif',
+        });
+      }
+
+      globalRiwayat.value = currentRiwayat; 
+      globalCart.value = []; 
+
+      if (mounted) {
+        setState(() {
+          _selectedTab = 1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Pembayaran Berhasil! E-Tiket Anda telah terbit.")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Terjadi kesalahan: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPaying = false);
+    }
+  }
 
       } else {
         throw "Server Error: ${response.statusCode}";

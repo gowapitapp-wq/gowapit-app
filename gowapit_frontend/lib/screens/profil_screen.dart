@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:math'; 
-import 'package:crypto/crypto.dart'; // --- TAMBAHAN UNTUK GRAVATAR ---
+import 'dart:math';
+import 'package:crypto/crypto.dart';
+import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
-import 'faq_screen.dart'; 
+import 'faq_screen.dart';
+import 'terms_privacy_screen.dart';
+import 'login_screen.dart';
 import '../theme_notifier.dart';
 
 class ProfilPage extends StatefulWidget {
@@ -18,8 +21,10 @@ class ProfilPage extends StatefulWidget {
 class _ProfilPageState extends State<ProfilPage> {
   String _namaLengkap = "Memuat...";
   String _email = "Memuat data...";
-  String _referralCode = "WAPIT-0000"; 
+  String _fotoProfil = "";
+  String _referralCode = "WAPIT-0000";
   bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -31,7 +36,10 @@ class _ProfilPageState extends State<ProfilPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? token = prefs.getString('jwt_token');
-      if (token == null) return;
+      if (token == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
       final response = await http.get(
         ApiConfig.uri("/api/users/me"),
         headers: {"Authorization": "Bearer $token"},
@@ -41,11 +49,12 @@ class _ProfilPageState extends State<ProfilPage> {
         setState(() {
           _namaLengkap = data['nama_lengkap'] ?? 'Petualang Wapit';
           _email = data['email'] ?? 'email@tidak.ditemukan';
+          _fotoProfil = data['foto_profil'] ?? '';
 
           String namaDepan = _namaLengkap.split(' ')[0].toUpperCase();
-          namaDepan = namaDepan.replaceAll(RegExp(r'[^A-Z]'), ''); 
+          namaDepan = namaDepan.replaceAll(RegExp(r'[^A-Z]'), '');
           if (namaDepan.isEmpty) namaDepan = "WAPIT";
-          String angkaAcak = (1000 + Random().nextInt(9000)).toString(); 
+          String angkaAcak = (1000 + Random().nextInt(9000)).toString();
           _referralCode = "$namaDepan-$angkaAcak";
 
           _isLoading = false;
@@ -58,55 +67,260 @@ class _ProfilPageState extends State<ProfilPage> {
     }
   }
 
+  Future<void> _updateProfile(String newName, String newPhotoBase64) async {
+    setState(() => _isSaving = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? token = prefs.getString('jwt_token');
+      if (token == null) return;
+
+      final response = await http.put(
+        ApiConfig.uri("/api/users/me"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json"
+        },
+        body: jsonEncode({
+          "nama_lengkap": newName,
+          "foto_profil": newPhotoBase64,
+        }),
+      );
+
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _namaLengkap = data['user']['nama_lengkap'] ?? newName;
+          _fotoProfil = data['user']['foto_profil'] ?? newPhotoBase64;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profil berhasil diperbarui!")),
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Gagal memperbarui profil di server.")),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Terjadi kesalahan: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source, TextEditingController nameController, StateSetter setModalState) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 70,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        String base64Image = "data:image/jpeg;base64,${base64Encode(bytes)}";
+        setModalState(() {
+          _fotoProfil = base64Image;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal mengambil foto dari galeri.")),
+        );
+      }
+    }
+  }
+
+  void _showEditProfileModal() {
+    final TextEditingController nameController = TextEditingController(text: _namaLengkap);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
+        final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
+        final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 16),
+                  Text("Edit Profil", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
+                  const SizedBox(height: 20),
+
+                  // Avatar Picker Preview
+                  GestureDetector(
+                    onTap: () => _showImageSourcePicker(nameController, setModalState),
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 45,
+                          backgroundColor: primaryColor.withValues(alpha: 0.2),
+                          backgroundImage: _getAvatarImageProvider(),
+                          child: _fotoProfil.isEmpty ? Icon(Icons.person, size: 45, color: primaryColor) : null,
+                        ),
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: primaryColor,
+                          child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text("Ketuk untuk mengubah foto", style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  const SizedBox(height: 20),
+
+                  // Edit Nama Field
+                  TextField(
+                    controller: nameController,
+                    style: TextStyle(color: textColor, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: "Nama Lengkap",
+                      labelStyle: TextStyle(color: primaryColor),
+                      prefixIcon: Icon(Icons.person_outline, color: primaryColor),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isSaving
+                          ? null
+                          : () async {
+                              String newName = nameController.text.trim();
+                              if (newName.isEmpty) return;
+                              Navigator.pop(context);
+                              await _updateProfile(newName, _fotoProfil);
+                            },
+                      child: _isSaving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text("Simpan Perubahan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showImageSourcePicker(TextEditingController nameController, StateSetter setModalState) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Pilih dari Galeri"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery, nameController, setModalState);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text("Ambil Foto dari Kamera"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera, nameController, setModalState);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ImageProvider? _getAvatarImageProvider() {
+    if (_fotoProfil.isNotEmpty) {
+      if (_fotoProfil.startsWith("data:image")) {
+        try {
+          String base64Str = _fotoProfil.split(',').last;
+          return MemoryImage(base64Decode(base64Str));
+        } catch (_) {}
+      } else if (_fotoProfil.startsWith("http")) {
+        return NetworkImage(_fotoProfil);
+      }
+    }
+    return NetworkImage(_dapatkanUrlGravatar(_email));
+  }
+
+  String _dapatkanUrlGravatar(String email) {
+    String cleanEmail = email.trim().toLowerCase();
+    String md5Hash = md5.convert(utf8.encode(cleanEmail)).toString();
+    return "https://www.gravatar.com/avatar/$md5Hash?d=identicon&s=200";
+  }
+
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
     if (mounted) {
       Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const Placeholder()),
-          (route) => false);
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     }
-  }
-
-  // --- FUNGSI MENGUBAH EMAIL MENJADI FOTO GRAVATAR ---
-  String _dapatkanUrlGravatar(String email) {
-    if (email == "Memuat data..." || email.isEmpty || email == 'email@tidak.ditemukan') {
-      // Tampilkan siluet default jika email belum selesai dimuat
-      return "https://www.gravatar.com/avatar/00000000000000000000000000000000?s=200&d=mp";
-    }
-    final cleanEmail = email.toLowerCase().trim();
-    final emailHash = md5.convert(utf8.encode(cleanEmail)).toString();
-    return "https://www.gravatar.com/avatar/$emailHash?s=200&d=mp";
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    final Color bgColor =
-        isDarkMode ? const Color(0xFF121212) : const Color(0xFFE6F2DD);
+    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFF4F9F4);
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor =
-        isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor =
-        isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
-    final Color iconBgColor =
-        isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFeef5f2);
-    final Color dividerColor =
-        isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade100;
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
+    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color dividerColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+    final Color iconBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFF659287).withValues(alpha: 0.12);
 
     final List<BoxShadow> ambientShadow = isDarkMode
         ? []
         : [
-            BoxShadow(
-                color: const Color(0xFF659287).withValues(alpha: 0.12),
-                blurRadius: 15,
-                offset: const Offset(0, 6))
+            BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))
           ];
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -116,162 +330,119 @@ class _ProfilPageState extends State<ProfilPage> {
           padding: const EdgeInsets.only(left: 20.0, top: 8, bottom: 8),
           child: CircleAvatar(
             backgroundColor: primaryColor.withValues(alpha: 0.2),
-            // --- FOTO KECIL DI APPBAR ---
-            backgroundImage: NetworkImage(_dapatkanUrlGravatar(_email)),
-            onBackgroundImageError: (e, s) {}, // Abaikan jika error jaringan
-            child: const Icon(Icons.person, color: Colors.transparent),
+            backgroundImage: _getAvatarImageProvider(),
           ),
         ),
-        title: const Text("Go Wapit",
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-                fontFamily: 'Montserrat')),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: CircleAvatar(
-                backgroundColor: cardColor,
-                radius: 20,
-                child: Icon(Icons.notifications_none, color: primaryColor)),
-          )
-        ],
+        title: const Text("Go Wapit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22, fontFamily: 'Montserrat')),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryColor))
           : SingleChildScrollView(
-              padding: const EdgeInsets.only(
-                  left: 20, right: 20, top: 20, bottom: 120),
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // -- 1. KARTU PROFIL UTAMA --
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 30, horizontal: 20),
-                    decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: ambientShadow),
+                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
                     child: Column(
                       children: [
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: bgColor, width: 4)),
-                              child: CircleAvatar(
+                        GestureDetector(
+                          onTap: _showEditProfileModal,
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 3)),
+                                child: CircleAvatar(
                                   radius: 45,
                                   backgroundColor: Colors.grey.shade200,
-                                  // --- FOTO BESAR DI TENGAH ---
-                                  backgroundImage: NetworkImage(_dapatkanUrlGravatar(_email)),
-                                  onBackgroundImageError: (e, s) {}, // Abaikan jika error jaringan
-                                  child: const Icon(Icons.person,
-                                      size: 40, color: Colors.transparent)),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                  color: primaryColor,
-                                  shape: BoxShape.circle,
-                                  border:
-                                      Border.all(color: cardColor, width: 2)),
-                              child: const Icon(Icons.edit,
-                                  color: Colors.white, size: 14),
-                            ),
-                          ],
+                                  backgroundImage: _getAvatarImageProvider(),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle, border: Border.all(color: cardColor, width: 2)),
+                                child: const Icon(Icons.edit, color: Colors.white, size: 14),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
-                        Text(_namaLengkap,
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                                fontFamily: 'Montserrat')),
-                        const SizedBox(height: 4),
-                        Text(_email,
-                            style:
-                                TextStyle(fontSize: 13, color: subTextColor)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_namaLengkap, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: Icon(Icons.edit_outlined, size: 18, color: primaryColor),
+                              onPressed: _showEditProfileModal,
+                            )
+                          ],
+                        ),
+                        Text(_email, style: TextStyle(fontSize: 13, color: subTextColor)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
-                  // -- 2. MENU AKTIVITAS --
-                  _buildSectionTitle("AKTIVITAS", primaryColor),
+                  // -- 2. KARTU KODE REFERRAL --
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
+                            const SizedBox(height: 4),
+                            Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.copy, color: primaryColor),
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Kode Referral $_referralCode berhasil disalin!")),
+                            );
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // -- 3. PENGATURAN TEMA & BAHASA --
+                  _buildSectionHeader("PENGATURAN", primaryColor),
                   _buildMenuContainer(cardColor, ambientShadow, [
-                    _buildListItem(Icons.confirmation_number_outlined,
-                        "Daftar Tiket", textColor, iconBgColor, primaryColor),
-                    _buildDivider(dividerColor),
-                    _buildListItem(Icons.history, "Riwayat Transaksi",
-                        textColor, iconBgColor, primaryColor),
+                    _buildListItem(Icons.palette_outlined, "Theme", textColor, iconBgColor, primaryColor, trailing: Consumer<ThemeNotifier>(
+                      builder: (context, theme, child) {
+                        return Switch(
+                          value: theme.isDarkMode,
+                          activeColor: primaryColor,
+                          onChanged: (val) => theme.toggleTheme(val),
+                        );
+                      },
+                    )),
                   ]),
                   const SizedBox(height: 24),
 
-                  // -- 3. MENU PENGATURAN --
-                  _buildSectionTitle("REWARD & PENGATURAN", primaryColor),
+                  // -- 4. PUSAT BANTUAN & LEGAL --
+                  _buildSectionHeader("INFORMASI & SYARAT", primaryColor),
                   _buildMenuContainer(cardColor, ambientShadow, [
                     _buildListItem(
-                      Icons.card_giftcard,
-                      "Poin & Referal",
-                      textColor,
-                      iconBgColor,
-                      primaryColor,
-                      trailingText: "150 Pts",
-                      onTap: () => _showReferralDialog(context, isDarkMode, primaryColor),
+                      Icons.help_outline, "FAQ", textColor, iconBgColor, primaryColor,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FaqPage())),
                     ),
                     _buildDivider(dividerColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: iconBgColor,
-                            borderRadius: BorderRadius.circular(12)),
-                        child: Icon(Icons.palette_outlined,
-                            color: primaryColor, size: 20),
-                      ),
-                      title: Text("Tema",
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textColor)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(isDarkMode ? "Gelap" : "Terang",
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 12)),
-                          const SizedBox(width: 12),
-                          CustomThemeToggle(
-                            isDarkMode: isDarkMode,
-                            onChanged: (val) {
-                              isDarkModeGlobal.value = val;
-                            },
-                          ),
-                        ],
-                      ),
+                    _buildListItem(
+                      Icons.security, "Terms & Privacy Policy", textColor, iconBgColor, primaryColor,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPrivacyPage())),
                     ),
-                  ]),
-                  const SizedBox(height: 24),
-
-                  // -- 4. MENU DUKUNGAN --
-                  _buildSectionTitle("DUKUNGAN", primaryColor),
-                  _buildMenuContainer(cardColor, ambientShadow, [
-                    _buildListItem(Icons.help_outline, "FAQ", textColor,
-                        iconBgColor, primaryColor,
-                        onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const FaqPage()))),
-                    _buildDivider(dividerColor),
-                    _buildListItem(Icons.security, "Terms & Privacy Policy",
-                        textColor, iconBgColor, primaryColor),
                   ]),
                   const SizedBox(height: 32),
 
@@ -281,22 +452,9 @@ class _ProfilPageState extends State<ProfilPage> {
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: ambientShadow),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.logout,
-                              color: Color(0xFFD32F2F), size: 20),
-                          SizedBox(width: 10),
-                          Text("Logout",
-                              style: TextStyle(
-                                  color: Color(0xFFD32F2F),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold)),
-                        ],
+                      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
+                      child: const Center(
+                        child: Text("Keluar Akun", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Montserrat')),
                       ),
                     ),
                   ),
@@ -306,210 +464,51 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title, Color primaryColor) {
+  Widget _buildSectionHeader(String title, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
-      child: Text(title,
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-              letterSpacing: 1.0)),
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color, letterSpacing: 1.2, fontFamily: 'Montserrat')),
     );
   }
 
-  Widget _buildMenuContainer(
-      Color cardColor, List<BoxShadow> shadow, List<Widget> children) {
+  Widget _buildMenuContainer(Color bgColor, List<BoxShadow> shadow, List<Widget> children) {
     return Container(
-      decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: shadow),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
       child: Column(children: children),
     );
   }
 
-  Widget _buildListItem(IconData icon, String title, Color textColor,
-      Color iconBgColor, Color iconColor,
-      {String? trailingText, VoidCallback? onTap}) {
+  Widget _buildListItem(IconData icon, String title, Color textColor, Color iconBgColor, Color primaryColor, {Widget? trailing, VoidCallback? onTap}) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: iconBgColor, borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(title,
-          style: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w600, color: textColor)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (trailingText != null)
-            Text(trailingText,
-                style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          if (trailingText != null) const SizedBox(width: 8),
-          const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
-        ],
-      ),
       onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, color: primaryColor, size: 20),
+      ),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor)),
+      trailing: trailing ?? Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
     );
   }
 
   Widget _buildDivider(Color color) {
-    return Divider(
-        height: 1, thickness: 1, color: color, indent: 65, endIndent: 16);
-  }
-
-  void _showReferralDialog(BuildContext context, bool isDarkMode, Color primaryColor) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            Icon(Icons.stars, size: 50, color: Colors.orange.shade400),
-            const SizedBox(height: 12),
-            Text(
-              "Ajak Teman, Dapatkan Poin!", 
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isDarkMode ? Colors.white : Colors.black87, fontFamily: 'Montserrat')
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Bagikan kode referal ini ke temanmu. Dapatkan 50 poin setiap kali mereka mendaftar dan memesan tiket!", 
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5)
-            ),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Kode berhasil disalin!"), backgroundColor: Color(0xFF4CAF50)),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_referralCode, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: primaryColor, letterSpacing: 2.0)),
-                    Icon(Icons.copy, color: primaryColor, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Center(
-            child: TextButton(
-              onPressed: () => Navigator.pop(context), 
-              child: const Text("Tutup", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))
-            ),
-          ),
-        ],
-      ),
-    );
+    return Divider(height: 1, thickness: 1, color: color, indent: 16, endIndent: 16);
   }
 
   void _showLogoutDialog(BuildContext context, bool isDarkMode) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("Konfirmasi Logout",
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-                fontFamily: 'Montserrat')),
-        content: const Text("Apakah Anda yakin ingin keluar dari akun ini?",
-            style: TextStyle(color: Colors.grey, fontSize: 13)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Batal",
-                  style: TextStyle(
-                      color: Colors.grey, fontWeight: FontWeight.bold))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD32F2F),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                elevation: 0),
-            onPressed: () {
-              Navigator.pop(context);
-              _logout();
-            },
-            child: const Text("Keluar",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CustomThemeToggle extends StatelessWidget {
-  final bool isDarkMode;
-  final ValueChanged<bool> onChanged;
-
-  const CustomThemeToggle(
-      {super.key, required this.isDarkMode, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onChanged(!isDarkMode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 50,
-        height: 26,
-        decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF88BDA4) : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(30)),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            AnimatedAlign(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              alignment:
-                  isDarkMode ? Alignment.centerRight : Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(2.0),
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: const BoxDecoration(
-                      color: Colors.white, shape: BoxShape.circle),
-                  child: Center(
-                    child: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                        size: 12,
-                        color: isDarkMode
-                            ? const Color(0xFF88BDA4)
-                            : Colors.orange),
-                  ),
-                ),
-              ),
-            ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Konfirmasi Keluar", style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text("Apakah Anda yakin ingin keluar dari aplikasi Go Wapit?"),
+          actions: [
+            TextButton(child: const Text("Batal", style: TextStyle(color: Colors.grey)), onPressed: () => Navigator.of(context).pop()),
+            TextButton(child: const Text("Keluar", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), onPressed: () { Navigator.of(context).pop(); _logout(); }),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

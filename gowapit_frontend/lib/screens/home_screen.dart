@@ -9,6 +9,7 @@ import 'destinasi_screen.dart';
 import 'kuliner_screen.dart';
 import 'paket_screen.dart';
 import 'layanan_umum_screen.dart';
+import 'search_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -171,20 +172,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
             const SizedBox(height: 24),
 
             // --- 2. SEARCH BAR ---
-            Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDarkMode ? Colors.grey.shade800 : secondaryColor.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: secondaryColor, size: 20),
-                  const SizedBox(width: 12),
-                  Text("Cari destinasi atau layanan...", style: TextStyle(color: subTextColor, fontSize: 13)),
-                ],
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen()));
+              },
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDarkMode ? Colors.grey.shade800 : secondaryColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: secondaryColor, size: 20),
+                    const SizedBox(width: 12),
+                    Text("Cari destinasi, tiket, atau kuliner...", style: TextStyle(color: subTextColor, fontSize: 13)),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 32),

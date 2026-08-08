@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
-import 'onboarding_screen.dart'; // Pastikan import halaman onboarding
+import 'onboarding_screen.dart';
+import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,12 +15,28 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Berpindah ke Onboarding setelah 2.5 detik
-    Timer(const Duration(milliseconds: 2500), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+    _checkLoginSession();
+  }
+
+  Future<void> _checkLoginSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('jwt_token');
+
+    Timer(const Duration(milliseconds: 2000), () {
+      if (!mounted) return;
+      if (token != null && token.isNotEmpty) {
+        // Langsung ke Home Dashboard jika sudah login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigator()),
+        );
+      } else {
+        // Ke halaman Onboarding jika belum login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      }
     });
   }
 
