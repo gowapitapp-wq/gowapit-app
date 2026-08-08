@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             // Ikon 3D Utama
                             Image.asset(
-                              'images/3d_login.png', // <-- Masukkan gambar 3D Anda di sini
+                              'assets/images/3d_login.png', // <-- Masukkan gambar 3D Anda di sini
                               height: 100, width: 100, fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) => Icon(Icons.hub_rounded, size: 80, color: primaryColor),
                             ),

@@ -39,7 +39,7 @@ class PetaScreen extends StatelessWidget {
                 color: cardColor,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: ambientShadow,
-                image: const DecorationImage(image: AssetImage('images/peta_wapit.png'), fit: BoxFit.cover),
+                image: const DecorationImage(image: AssetImage('assets/images/peta_wapit.png'), fit: BoxFit.cover),
               ),
               child: Container(
                 decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Colors.black.withValues(alpha: 0.3)),

@@ -25,7 +25,8 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
 
     final String nama = widget.data['nama'] ?? 'Destinasi Wapit';
     final String deskripsi = widget.data['deskripsi_panjang'] ?? widget.data['deskripsi_singkat'] ?? 'Deskripsi tidak tersedia.';
-    final String gambar = widget.data['gambar'] ?? 'assets/images/placeholder.jpeg';
+    String rawGambar = widget.data['gambar'] ?? 'assets/images/placeholder.jpeg';
+    final String gambar = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
 
     // Menyaring destinasi lain
     final List<dynamic> wisataLain = widget.allDestinasi.where((item) => item['nama'] != nama).toList();
@@ -165,7 +166,11 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: isDarkMode ? [] : [BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.15), blurRadius: 12, offset: const Offset(0, 6))],
                                 image: DecorationImage(
-                                  image: AssetImage(itemLain['gambar'] ?? 'assets/images/placeholder.jpeg'),
+                                  image: AssetImage(
+                                    (itemLain['gambar'] ?? 'assets/images/placeholder.jpeg').toString().startsWith('assets/')
+                                      ? itemLain['gambar']
+                                      : 'assets/${itemLain['gambar']}'
+                                  ),
                                   fit: BoxFit.cover,
                                 )
                               ),

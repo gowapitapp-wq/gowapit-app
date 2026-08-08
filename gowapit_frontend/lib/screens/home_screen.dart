@@ -144,7 +144,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(radius: 20, backgroundImage: AssetImage('images/default_avatar.png')),
+                    const CircleAvatar(radius: 20, backgroundImage: AssetImage('assets/images/default_avatar.png')),
                     const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,7 +205,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     primaryColor, 
                     isDarkMode, 
                     ambientShadow,
-                    'images/BeritaDiskon.png' // <-- Tambahkan path gambar di sini
+                    'assets/images/BeritaDiskon.png'
                   ),
                   _buildPromoCard(
                     "Event", 
@@ -214,7 +214,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     const Color(0xFF44634e), 
                     isDarkMode, 
                     ambientShadow,
-                    'images/BeritaFestivalKopi.png' // <-- Tambahkan path gambar di sini
+                    'assets/images/BeritaFestivalKopi.png'
                   ),
                   _buildPromoCard(
                     "Info", 
@@ -223,7 +223,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     const Color(0xFFD32F2F), 
                     isDarkMode, 
                     ambientShadow,
-                    'images/HighRope.jpg' // <-- Tambahkan path gambar di sini
+                    'assets/images/HighRope.jpg'
                   ),
                 ],
               ),
@@ -308,28 +308,28 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 _buildPopularCardVertical(
                   "Hutan Pinus", "4.8", 
                   "Hutan asri dan sejuk di kaki Gunung Sindoro dengan deretan pohon pinus menjulang tinggi.", // Menggantikan harga
-                  'images/HutanPinus.jpeg', 
+                  'assets/images/HutanPinus.jpeg', 
                   cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
                 ),
                 const SizedBox(height: 16),
                 _buildPopularCardVertical(
                   "Mata Air Suci", "4.9", 
                   "Mata air jernih abadi bernilai spiritual yang menjadi sumber aliran Sungai Progo.", // Menggantikan harga
-                  'images/MataAirSuci.jpeg', 
+                  'assets/images/MataAirSuci.jpeg', 
                   cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
                 ),
                 const SizedBox(height: 16),
                 _buildPopularCardVertical(
                   "Flying Fox", "4.7", 
                   "Wahana meluncur pemacu adrenalin untuk menikmati panorama hutan dari ketinggian.", // Menggantikan harga
-                  'images/FlyingFox.jpeg',
+                  'assets/images/FlyingFox.jpeg',
                   cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
                 ),
                 const SizedBox(height: 16),
                 _buildPopularCardVertical(
                   "Tari Wedok Tegowanuh", "4.5", 
                   "Tari Wedok Tegowanuh merupakan tarian khas Kaloran, Temanggung, yang rutin ditampilkan di Wisata Wapit (Wisata Alam Umbul Jumprit) sebagai upaya melestarikan warisan budaya sekaligus menarik minat wisatawan.", // Menggantikan harga
-                  'images/Tari.jpeg',
+                  'assets/images/Tari.jpeg',
                   cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
                 ),
               ],

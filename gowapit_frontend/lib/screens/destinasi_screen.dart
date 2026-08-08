@@ -128,7 +128,9 @@ class _HoverableDestinasiCardState extends State<HoverableDestinasiCard> {
             ClipRRect(
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomLeft: Radius.circular(16)),
               child: Image.asset(
-                widget.item['gambar'] ?? 'assets/images/placeholder.jpeg',
+                (widget.item['gambar'] ?? 'assets/images/placeholder.jpeg').toString().startsWith('assets/')
+                    ? widget.item['gambar']
+                    : 'assets/${widget.item['gambar']}',
                 width: 100,
                 height: double.infinity,
                 fit: BoxFit.cover,

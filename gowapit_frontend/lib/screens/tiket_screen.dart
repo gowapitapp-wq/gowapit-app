@@ -354,7 +354,13 @@ class _TiketPageState extends State<TiketPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(item['gambar'] ?? 'assets/images/placeholder.jpeg', width: 70, height: 70, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(width: 70, height: 70, color: dividerColor, child: Icon(Icons.image_outlined, color: subTextColor))),
+            child: Image.asset(
+              ((item['gambar'] ?? 'assets/images/placeholder.jpeg').toString().startsWith('assets/'))
+                  ? item['gambar']
+                  : 'assets/${item['gambar']}',
+              width: 70, height: 70, fit: BoxFit.cover, 
+              errorBuilder: (c, e, s) => Container(width: 70, height: 70, color: dividerColor, child: Icon(Icons.image_outlined, color: subTextColor))
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(

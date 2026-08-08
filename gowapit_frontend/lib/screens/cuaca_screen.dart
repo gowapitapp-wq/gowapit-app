@@ -57,13 +57,13 @@ class _CuacaScreenState extends State<CuacaScreen> {
 
   // --- KAMUS CUACA (KINI MENGGUNAKAN PATH GAMBAR 3D) ---
   Map<String, dynamic> _getWeatherInfo(int code) {
-    if (code == 0) return {'desc': 'Cerah', 'image': 'images/3d_sun.png', 'color': Colors.orange};
-    if (code == 1 || code == 2 || code == 3) return {'desc': 'Berawan', 'image': 'images/3d_cloud.png', 'color': Colors.grey};
-    if (code == 45 || code == 48) return {'desc': 'Berkabut', 'image': 'images/3d_fog.png', 'color': Colors.blueGrey};
-    if (code == 51 || code == 53 || code == 55) return {'desc': 'Gerimis', 'image': 'images/3d_drizzle.png', 'color': Colors.lightBlue};
-    if (code == 61 || code == 63 || code == 65) return {'desc': 'Hujan', 'image': 'images/3d_rain.png', 'color': Colors.blue};
-    if (code == 80 || code == 81 || code == 82) return {'desc': 'Hujan Deras', 'image': 'images/3d_heavy_rain.png', 'color': Colors.indigo};
-    if (code == 95 || code == 96 || code == 99) return {'desc': 'Badai Petir', 'image': 'images/3d_thunderstorm.png', 'color': Colors.deepPurple};
+    if (code == 0) return {'desc': 'Cerah', 'image': 'assets/images/3d_sun.png', 'color': Colors.orange};
+    if (code == 1 || code == 2 || code == 3) return {'desc': 'Berawan', 'image': 'assets/images/3d_cloud.png', 'color': Colors.grey};
+    if (code == 45 || code == 48) return {'desc': 'Berkabut', 'image': 'assets/images/3d_fog.png', 'color': Colors.blueGrey};
+    if (code == 51 || code == 53 || code == 55) return {'desc': 'Gerimis', 'image': 'assets/images/3d_drizzle.png', 'color': Colors.lightBlue};
+    if (code == 61 || code == 63 || code == 65) return {'desc': 'Hujan', 'image': 'assets/images/3d_rain.png', 'color': Colors.blue};
+    if (code == 80 || code == 81 || code == 82) return {'desc': 'Hujan Deras', 'image': 'assets/images/3d_heavy_rain.png', 'color': Colors.indigo};
+    if (code == 95 || code == 96 || code == 99) return {'desc': 'Badai Petir', 'image': 'assets/images/3d_thunderstorm.png', 'color': Colors.deepPurple};
     return {'desc': 'Cerah Berawan', 'image': 'assets/images/3d_cloud.png', 'color': Colors.blue}; 
   }
 

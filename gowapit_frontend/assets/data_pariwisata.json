@@ -59,43 +59,43 @@
             "nama": "Hutan Pinus",
             "deskripsi_singkat": "Hutan asri dan sejuk di kaki Gunung Sindoro dengan deretan pohon pinus menjulang tinggi.",
             "deskripsi_panjang": "Di bawah kaki Gunung Sindoro, Hutan Pinus Umbul Jumprit menawarkan keindahan yang luar biasa dari pohon menjulang tinggi yang kokoh dan dipadukan dengan warna cerah serta sejuknya udara yang dihasilkan",
-            "gambar": "images/HutanPinus.jpeg"
+            "gambar": "assets/images/HutanPinus.jpeg"
         },
         {
             "nama": "Makam Ki Jumprit",
             "deskripsi_singkat": "Destinasi wisata religi untuk berziarah, mencari ketenangan, dan mempelajari sejarah.",
             "deskripsi_panjang": "Terletak tidak jauh dari area mata air utama, Makam Ki Jumprit ini menjadi destinasi ziarah yang sering dikunjungi oleh peziarah dari berbagai daerah untuk mencari ketenangan, mendoakan leluhur ataupun memkuat dan memperdalam ilmu sejarah ataupun kebudayaan.",
-            "gambar": "images/MakamKiJumprit.jpeg"
+            "gambar": "assets/images/MakamKiJumprit.jpeg"
         },
         {
             "nama": "Mata Air Suci",
             "deskripsi_singkat": "Mata air jernih abadi bernilai spiritual yang menjadi sumber aliran Sungai Progo.",
             "deskripsi_panjang": "Perjalanan sebelum menuju makam, terdapat sumber mata air yang disucikan dan memiliki nilai spiritual yang kuat. Mata Air Umbul Jumprit yang dikenal memiliki air sangat jernih dan kebiruan sampai dikatakan sebagai mata air abadi yang tidak pernah habis walaupun musim kemarau datang serta menjadi sumber air bagi Sungai Progo.",
-            "gambar": "images/MataAirSuci.jpeg"
+            "gambar": "assets/images/MataAirSuci.jpeg"
         },
         {
             "nama": "Interasi dengan Monyet",
             "deskripsi_singkat": "Pengalaman seru bermain dan berinteraksi langsung dengan kera ekor panjang di area hutan.",
             "deskripsi_panjang": "Sela merasakan kesejukan dari rimbunnya Hutan Pinus dan segarnya udara yang ada di daerah pegunungan. Bagi pecinta satwa akan disambut dengan hangat oleh Kawanan Kera Ekor Panjang yang sangat menarik, interaksi dengan hewan ini menjadi daya tarik sendiri dan tidak terlupakan.",
-            "gambar": "images/InteraksiDenganMonyet.jpg"
+            "gambar": "assets/images/InteraksiDenganMonyet.jpg"
         },
         {
             "nama": "Flying Fox",
             "deskripsi_singkat": "Wahana meluncur pemacu adrenalin untuk menikmati panorama hutan dari ketinggian.",
             "deskripsi_panjang": "Pecinta adrenalin yang menyukai tantangan pastinya menyukai aktivitas yang membuat energi kembali bersemangat, berlibur ke Wappit belum lengkap jika tidak mencoba Flying Fox Sembari menikmati keindahan daerah hutan pinus Wappit.",
-            "gambar": "images/FlyingFox.jpeg"
+            "gambar": "assets/images/FlyingFox.jpeg"
         },
         {
             "nama": "Flying Fox Anak",
             "deskripsi_singkat": "Wahana meluncur khusus yang dirancang aman untuk melatih keberanian anak-anak.",
             "deskripsi_panjang": "Liburan keluarga ke Hutan Pinus Umbul Jumprit akan semakin berkesan bagi anak-anak dengan hadirnya wahana Flying Fox Khusus Anak. Wahana ini dirancang khusus agar anak-anak dapat melatih keberanian dan kemandirian.",
-            "gambar": "images/FlyingFoxAnak.jpeg"
+            "gambar": "assets/images/FlyingFoxAnak.jpeg"
         },
         {
             "nama": "High Rope",
             "deskripsi_singkat": "Rintangan tali gantung di ketinggian untuk menguji keberanian, ketangkasan, dan keseimbangan.",
             "deskripsi_panjang": "Jika memiliki mental yang tinggi uji keberanian, keseimbangan, dan ketangkasan melalui wahana High Rope (tali tinggi). Berjalan di atas jali gantung di ketinggian akan memberikan sensasi liburan yang memacu adrenalin sekaligus sangat memuaskan.",
-            "gambar": "images/HighRope.jpg"
+            "gambar": "assets/images/HighRope.jpg"
         }
     ],
     "layanan_umum": [
@@ -120,7 +120,7 @@
                     {
                         "nama": "Mie Njeplak",
                         "harga": "Rp 15.000",
-                        "image": "images/MieNyeplak.jpeg"
+                        "image": "assets/images/MieNyeplak.jpeg"
                     },
                     {
                         "nama": "Mie Entah Marah",
@@ -130,12 +130,12 @@
                             "3"
                         ],
                         "harga": "Rp 15.000",
-                        "image": "images/MieEntahMarah.jpeg"
+                        "image": "assets/images/MieEntahMarah.jpeg"
                     },
                     {
                         "nama": "Mie Goreng ORI",
                         "harga": "Rp 8.000",
-                        "image": "images/MieGorengOri.jpeg"
+                        "image": "assets/images/MieGorengOri.jpeg"
                     },
                     {
                         "nama": "Mie Goreng ISI",
@@ -144,22 +144,22 @@
                             "Sosis"
                         ],
                         "harga": "Rp 10.000",
-                        "image": "images/MieGorengIsiTelur-Sosis.jpeg"
+                        "image": "assets/images/MieGorengIsiTelur-Sosis.jpeg"
                     },
                     {
                         "nama": "Mie Ori Seblak Keplak",
                         "harga": "Rp 15.000",
-                        "image": "images/MieOriSeblakKeplak.jpeg"
+                        "image": "assets/images/MieOriSeblakKeplak.jpeg"
                     },
                     {
                         "nama": "Mie Ramen",
                         "harga": "Rp 15.000",
-                        "image": "images/MieRamen.jpeg"
+                        "image": "assets/images/MieRamen.jpeg"
                     },
                     {
                         "nama": "Mie Rebus ORI",
                         "harga": "Rp 8.000",
-                        "image": "images/MieRebusOri.jpeg"
+                        "image": "assets/images/MieRebusOri.jpeg"
                     },
                     {
                         "nama": "Mie Rebus ISI",
@@ -168,7 +168,7 @@
                             "Sosis"
                         ],
                         "harga": "Rp 10.000",
-                        "image": "images/MieRebusIsiTelur-Sosis.jpeg"
+                        "image": "assets/images/MieRebusIsiTelur-Sosis.jpeg"
                     }
                 ]
             },
@@ -178,27 +178,27 @@
                     {
                         "nama": "SONUT (SOsis NUggeT)",
                         "harga": "Rp 15.000",
-                        "image": "images/SONUT.jpeg"
+                        "image": "assets/images/SONUT.jpeg"
                     },
                     {
                         "nama": "SOBAKS (SOsis BAKso)",
                         "harga": "Rp 15.000",
-                        "image": "images/SOBAKS.jpeg"
+                        "image": "assets/images/SOBAKS.jpeg"
                     },
                     {
                         "nama": "WAPPIT MIX",
                         "harga": "Rp 20.000",
-                        "image": "images/SONUT.jpeg"
+                        "image": "assets/images/SONUT.jpeg"
                     },
                     {
                         "nama": "Kentang Goreng",
                         "harga": "Rp 12.000",
-                        "image": "images/KentangGorengOri.jpeg"
+                        "image": "assets/images/KentangGorengOri.jpeg"
                     },
                     {
                         "nama": "Cheese and Meat",
                         "harga": "Rp 17.000",
-                        "image": "images/CheeseAndMeet.jpeg"
+                        "image": "assets/images/CheeseAndMeet.jpeg"
                     }
                 ]
             },
@@ -220,7 +220,7 @@
                             "americano": 15000,
                             "espresso": 18000
                         },
-                        "image": "images/ArabikaFullwashedTubruk.jpeg"
+                        "image": "assets/images/ArabikaFullwashedTubruk.jpeg"
                     },
                     {
                         "jenis_kopi": "Arabika Natural",
@@ -229,7 +229,7 @@
                             "americano": 18000,
                             "espresso": 20000
                         },
-                        "image": "images/ArabikaNaturalTubruk.jpeg"
+                        "image": "assets/images/ArabikaNaturalTubruk.jpeg"
                     },
                     {
                         "jenis_kopi": "Luwak",
@@ -238,7 +238,7 @@
                             "americano": 28000,
                             "espresso": 30000
                         },
-                        "image": "images/LuwakAmericano.jpeg"
+                        "image": "assets/images/LuwakAmericano.jpeg"
                     },
                     {
                         "jenis_kopi": "Blend",
@@ -247,7 +247,7 @@
                             "americano": 13000,
                             "espresso": 15000
                         },
-                        "image": "images/LuwakTubruk.jpeg"
+                        "image": "assets/images/LuwakTubruk.jpeg"
                     }
                 ]
             },
@@ -260,7 +260,7 @@
                             "vietnam_drip": 20000,
                             "moka_pot": 20000
                         },
-                        "image": "images/Americano.jpeg"
+                        "image": "assets/images/Americano.jpeg"
                     },
                     {
                         "jenis_kopi": "Arabika Fullwashed",
@@ -269,7 +269,7 @@
                             "vietnam_drip": 25000,
                             "moka_pot": 25000
                         },
-                        "image": "images/ArabikaFullwashedTubruk.jpeg"
+                        "image": "assets/images/ArabikaFullwashedTubruk.jpeg"
                     },
                     {
                         "jenis_kopi": "Arabika Natural",
@@ -278,7 +278,7 @@
                             "vietnam_drip": 28000,
                             "moka_pot": 28000
                         },
-                        "image": "images/ArabikaNaturalTubruk.jpeg"
+                        "image": "assets/images/ArabikaNaturalTubruk.jpeg"
                     },
                     {
                         "jenis_kopi": "Luwak",
@@ -287,7 +287,7 @@
                             "vietnam_drip": 30000,
                             "moka_pot": 30000
                         },
-                        "image": "images/LuwakTubruk.jpeg"
+                        "image": "assets/images/LuwakTubruk.jpeg"
                     },
                     {
                         "jenis_kopi": "Blend",
@@ -296,7 +296,7 @@
                             "vietnam_drip": 20000,
                             "moka_pot": 20000
                         },
-                        "image": "images/LuwakExpresso.jpeg"
+                        "image": "assets/images/LuwakExpresso.jpeg"
                     }
                 ],
                 "tambahan": [
@@ -311,87 +311,87 @@
                     {
                         "nama_menu": "Cappuccino",
                         "harga": 15000,
-                        "image": "images/Cappucino.jpeg"
+                        "image": "assets/images/Cappucino.jpeg"
                     },
                     {
                         "nama_menu": "Mochaccino",
                         "harga": 15000,
-                        "image": "images/Moccachino.jpeg"
+                        "image": "assets/images/Moccachino.jpeg"
                     },
                     {
                         "nama_menu": "Latte",
                         "harga": 15000,
-                        "image": "images/Latte.jpeg"
+                        "image": "assets/images/Latte.jpeg"
                     },
                     {
                         "nama_menu": "Kopi Susu Aren",
                         "harga": 15000,
-                        "image": "images/KopiSusuAren.jpeg"
+                        "image": "assets/images/KopiSusuAren.jpeg"
                     },
                     {
                         "nama_menu": "Sanger",
                         "harga": 15000,
-                        "image": "images/Sanger.jpeg"
+                        "image": "assets/images/Sanger.jpeg"
                     },
                     {
                         "nama_menu": "Coffee Beer",
                         "harga": 20000,
-                        "image": "images/CoffeeBear.jpeg"
+                        "image": "assets/images/CoffeeBear.jpeg"
                     },
                     {
                         "nama_menu": "Coffee Peanut",
                         "harga": 15000,
-                        "image": "images/CoffeePeanut.jpeg"
+                        "image": "assets/images/CoffeePeanut.jpeg"
                     },
                     {
                         "nama_menu": "Butter",
                         "harga": 15000,
-                        "image": "images/Butter.jpeg"
+                        "image": "assets/images/Butter.jpeg"
                     },
                     {
                         "nama_menu": "Coffee Oreo",
                         "harga": 15000,
-                        "image": "images/CoffeeOreo.jpeg"
+                        "image": "assets/images/CoffeeOreo.jpeg"
                     },
                     {
                         "nama_menu": "Es Kopi",
                         "harga": 15000,
-                        "image": "images/EsKopi.jpeg"
+                        "image": "assets/images/EsKopi.jpeg"
                     },
                     {
                         "nama_menu": "Macchiato",
                         "harga": 15000,
-                        "image": "images/Macchiato.jpeg"
+                        "image": "assets/images/Macchiato.jpeg"
                     },
                     {
                         "nama_menu": "Vanilla Latte",
                         "harga": 15000,
-                        "image": "images/VanillaLatte.jpeg"
+                        "image": "assets/images/VanillaLatte.jpeg"
                     },
                     {
                         "nama_menu": "Casscarasu",
                         "harga": 15000,
-                        "image": "images/Casscarasu.jpeg"
+                        "image": "assets/images/Casscarasu.jpeg"
                     },
                     {
                         "nama_menu": "Hot Chocolate",
                         "harga": 15000,
-                        "image": "images/HotChocolate.jpeg"
+                        "image": "assets/images/HotChocolate.jpeg"
                     },
                     {
                         "nama_menu": "Choco Latte",
                         "harga": 15000,
-                        "image": "images/ChocoLatte.jpeg"
+                        "image": "assets/images/ChocoLatte.jpeg"
                     },
                     {
                         "nama_menu": "Choco Cheese",
                         "harga": 15000,
-                        "image": "images/ChocoCheese.jpeg"
+                        "image": "assets/images/ChocoCheese.jpeg"
                     },
                     {
                         "nama_menu": "Choco Shake",
                         "harga": 15000,
-                        "image": "images/ChokoShake.jpeg"
+                        "image": "assets/images/ChokoShake.jpeg"
                     }
                 ]
             }
