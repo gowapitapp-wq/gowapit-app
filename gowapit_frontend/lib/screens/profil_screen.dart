@@ -419,12 +419,13 @@ class _ProfilPageState extends State<ProfilPage> {
                   // -- 3. PENGATURAN TEMA & BAHASA --
                   _buildSectionHeader("PENGATURAN", primaryColor),
                   _buildMenuContainer(cardColor, ambientShadow, [
-                    _buildListItem(Icons.palette_outlined, "Theme", textColor, iconBgColor, primaryColor, trailing: Consumer<ThemeNotifier>(
-                      builder: (context, theme, child) {
+                    _buildListItem(Icons.palette_outlined, "Theme", textColor, iconBgColor, primaryColor, trailing: ValueListenableBuilder<bool>(
+                      valueListenable: isDarkModeGlobal,
+                      builder: (context, isDark, child) {
                         return Switch(
-                          value: theme.isDarkMode,
-                          activeColor: primaryColor,
-                          onChanged: (val) => theme.toggleTheme(val),
+                          value: isDark,
+                          activeTrackColor: primaryColor,
+                          onChanged: (val) => isDarkModeGlobal.value = val,
                         );
                       },
                     )),

@@ -238,7 +238,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 } else if (item['type'] == 'Kuliner') {
                                   Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()));
                                 } else if (item['type'] == 'Tiket') {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PaketWisataPage()));
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PaketPage()));
                                 }
                               },
                             ),

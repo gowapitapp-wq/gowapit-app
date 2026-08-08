@@ -194,20 +194,6 @@ class _TiketPageState extends State<TiketPage> {
     }
   }
 
-      } else {
-        throw "Server Error: ${response.statusCode}";
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal memproses: $e"), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isPaying = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
