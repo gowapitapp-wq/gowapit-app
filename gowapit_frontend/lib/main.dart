@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui'; // Wajib untuk efek BackdropFilter (Glassmorphism)
 import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';

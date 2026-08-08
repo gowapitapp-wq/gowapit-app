@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; 
-import '../main.dart'; // Untuk memanggil MainNavigator yang ada menu bawahnya
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
