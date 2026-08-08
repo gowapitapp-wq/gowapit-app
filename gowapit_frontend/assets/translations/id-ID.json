@@ -1,0 +1,10 @@
+{
+  "profile": {
+    "activity": "AKTIVITAS",
+    "settings": "PENGATURAN",
+    "choose_language": "Pilih Bahasa",
+    "theme": "Tema",
+    "support": "DUKUNGAN",
+    "logout": "Keluar"
+  }
+}

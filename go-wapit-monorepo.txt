@@ -1,0 +1,10 @@
+go-wapit-monorepo/
+├── apps/
+│   ├── api/             # Hono.js + Cloudflare Workers (Backend)
+│   ├── mobile/          # React Native + Expo (Android & iOS)
+│   └── web/             # Next.js + Vercel (Website & Admin)
+├── packages/
+│   ├── db/              # Drizzle ORM + Skema PostgreSQL
+│   └── shared-types/    # Skema validasi Zod & tipe TypeScript bersama
+├── package.json
+└── turbo.json

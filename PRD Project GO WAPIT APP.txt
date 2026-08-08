@@ -1,0 +1,69 @@
+PRD Project Go Wapit APP
+
+Nama Aplikasi: Go Wapit
+
+Fungsi: Untuk mempermudah wisatawan dalam mengakses Wahana Wisata Alam Jumprit Temanggung (WAPITT) yang berlokasi di Kec. Ngadirejo, Kab. Temanggung, Jawa Tengah. UI & UX yang diterapkan pada aplikasi ini simple, modern, and classic, dan memiliki experience yang sangat ramah dan tidak sulit bagi wisatawan. Selain itu, aplikasi ini juga kami tawarkan secara gratis yang dapat diakses oleh siapapun melalui website, atau dapat didownload di google play store maupun apps store. Aplikasi ini diharapkan dapat mempermudah wisatawan dalam akses ke Wahana Wisata Alam Jumprit Temanggung (WAPITT).
+
+Fitur:
+  1.   Membeli tiket destinasi
+  2.   Membeli tiket kuliner
+  3.   Akses layanan umum di Kabupaten Temanggung
+  4.   Informasi destinasi di Wahana Wisata Alam Jumprit Temanggung (WAPITT) 
+  5.   Informasi cuaca
+
+Page:
+  1.   Splash
+  2.   On Boarding (1, 2, 3)
+  3.   Sign In/Sign Up
+
+Navigation Bar (Bottom):
+  1.   Home
+  2.   Berita
+  3.   Keranjang Tiket
+  4.   Profile
+
+Isi Page:
+Splash:
+Menampilkan logo aplikasi Go Wapit
+
+On Boarding:
+Menampilkan informasi singkat mengenai Wahana Wisata Alam Jumprit Temanggung
+
+Sign In/Sign Up:
+Mengharuskan user untuk Sign In/Sign Up terlebih dahulu sebelum menggunakan aplikasi, dan dapat melalui email, Google, dan apple
+
+NavBar (Bottom):
+1. Home:
+  1.   Sapaan untuk user
+  2.   Tampilan sliding carousel berita terbaru
+  3.   Fitur utama (Destinasi, Kuliner, Tiket, Layanan umum) 
+  4.   Informasi cuaca
+
+2. Berita:
+Menampilkan berita-berita yang ada di wisata dengan fitur scrolling and search
+
+3. Keranjang:
+Menampilkan pesanan user yang belum terbayar (pending) dan sudah terbayar (payment success).
+
+4. Profile:
+  1.   Informasi user
+  2.   FAQ
+  3.   Theme
+  4.   Language
+  5.   Terms & Privacy Police
+
+Color Pallete:
+#659287
+#88BDA4
+#B1D3B9
+#E6F2DD
+
+Workflow:
+  1.   Backend
+  2.   Endpoint
+  3.   UI Template
+  4.   Frontend Logic
+
+
+
+
