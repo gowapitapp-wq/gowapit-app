@@ -43,34 +43,39 @@ class _LoginScreenState extends State<LoginScreen> {
         body: jsonEncode(bodyData), 
       );
 
-      final responseData = jsonDecode(response.body); //[cite: 5]
-      if (!mounted) return; //[cite: 5]
+      Map<String, dynamic> responseData = {};
+      try {
+        responseData = jsonDecode(response.body);
+      } catch (_) {}
 
-      if (response.statusCode == 200) { //[cite: 5]
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(responseData["message"] ?? "Berhasil!"))); //[cite: 5]
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(responseData["message"] ?? "Berhasil!")));
         
         if (isLoginMode) {
-          final String token = responseData['access_token'] ?? '';  //[cite: 5]
-          final prefs = await SharedPreferences.getInstance(); //[cite: 5]
-          await prefs.setString('jwt_token', token); //[cite: 5]
+          final String token = responseData['access_token'] ?? ''; 
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', token);
 
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const MainNavigator()), //[cite: 5]
+              MaterialPageRoute(builder: (context) => const MainNavigator()),
             );
           }
         } else {
-          setState(() => isLoginMode = true); //[cite: 5]
+          setState(() => isLoginMode = true);
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(responseData["detail"] ?? "Terjadi kesalahan"))); //[cite: 5]
+        String detailMessage = responseData["detail"] ?? responseData["message"] ?? "Gagal memproses (Kode: ${response.statusCode})";
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detailMessage), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (!mounted) return; 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Gagal terhubung ke server backend (${ApiConfig.baseUrl}). Pastikan server FastAPI berjalan."),
+          content: Text("Terjadi gangguan koneksi internet. Silakan coba beberapa saat lagi."),
           duration: const Duration(seconds: 4),
         ),
       ); 
