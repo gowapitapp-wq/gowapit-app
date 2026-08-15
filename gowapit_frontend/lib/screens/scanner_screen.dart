@@ -57,16 +57,16 @@ class _ScannerScreenState extends State<ScannerScreen>
     _cameraController = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
       returnImage: false,
-      autoStart: true,
     );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      _cameraController.stop();
+      _cameraController.stop().catchError((_) {});
     } else if (state == AppLifecycleState.resumed) {
-      _cameraController.start();
+      _cameraController.start().catchError((_) {});
     }
   }
 
@@ -74,6 +74,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
+    _cameraController.stop().catchError((_) {});
     _cameraController.dispose();
     _codeController.dispose();
     super.dispose();
@@ -82,9 +83,11 @@ class _ScannerScreenState extends State<ScannerScreen>
   Future<void> _restartCamera() async {
     setState(() => _isCameraRestarting = true);
     try {
-      await _cameraController.stop();
+      await _cameraController.stop().catchError((_) {});
       await Future.delayed(const Duration(milliseconds: 300));
-      await _cameraController.start();
+      await _cameraController.start().catchError((e) {
+        debugPrint("Gagal start camera: $e");
+      });
     } catch (e) {
       debugPrint("Gagal me-restart kamera: $e");
     } finally {
