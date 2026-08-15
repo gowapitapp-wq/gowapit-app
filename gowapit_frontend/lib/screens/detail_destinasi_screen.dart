@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import 'login_screen.dart';
 
@@ -28,6 +29,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
   // Form state
   int _selectedRating = 5;
   final TextEditingController _reviewController = TextEditingController();
+  String? _reviewFotoBase64;
   bool _isSubmitting = false;
 
   @override
@@ -108,6 +110,9 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
           if (userReview != null) {
             _selectedRating = (userReview['rating'] is num) ? (userReview['rating'] as num).toInt() : 5;
             _reviewController.text = userReview['ulasan'] ?? '';
+            _reviewFotoBase64 = userReview['foto'];
+          } else {
+            _reviewFotoBase64 = null;
           }
         });
       } else {
@@ -116,6 +121,171 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     } catch (e) {
       if (mounted) setState(() => _isLoadingUlasan = false);
     }
+  }
+
+  Future<void> _pickReviewImage(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 75,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _reviewFotoBase64 = "data:image/jpeg;base64,${base64Encode(bytes)}";
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal mengambil foto: $e")),
+        );
+      }
+    }
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1C2824) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text(
+                  "Tambah Foto Ulasan",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Montserrat'),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5E9190).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF5E9190)),
+                  ),
+                  title: const Text("Ambil Foto dari Kamera", style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text("Potret langsung lokasi atau momen kunjungan Anda", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickReviewImage(ImageSource.camera);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB3D89C).withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.photo_library_rounded, color: Color(0xFF5E9190)),
+                  ),
+                  title: const Text("Pilih dari Galeri", style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text("Pilih foto yang sudah tersimpan di HP Anda", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickReviewImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildReviewImage(String fotoData, {double? height, double? width, BoxFit fit = BoxFit.cover}) {
+    if (fotoData.startsWith('data:image')) {
+      try {
+        final commaIdx = fotoData.indexOf(',');
+        final base64Str = commaIdx != -1 ? fotoData.substring(commaIdx + 1) : fotoData;
+        return Image.memory(
+          base64Decode(base64Str),
+          height: height,
+          width: width,
+          fit: fit,
+          errorBuilder: (c, e, s) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+        );
+      } catch (_) {
+        return const Icon(Icons.broken_image, size: 40, color: Colors.grey);
+      }
+    } else if (fotoData.startsWith('http://') || fotoData.startsWith('https://')) {
+      return Image.network(
+        fotoData,
+        height: height,
+        width: width,
+        fit: fit,
+        errorBuilder: (c, e, s) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+      );
+    } else {
+      return Image.asset(
+        fotoData,
+        height: height,
+        width: width,
+        fit: fit,
+        errorBuilder: (c, e, s) => const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+      );
+    }
+  }
+
+  void _showFullscreenImage(String fotoData) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              clipBehavior: Clip.none,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _buildReviewImage(fotoData, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: CircleAvatar(
+                backgroundColor: Colors.black54,
+                radius: 18,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submitReview() async {
@@ -141,6 +311,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
         body: jsonEncode({
           "rating": _selectedRating,
           "ulasan": _reviewController.text.trim(),
+          "foto": _reviewFotoBase64,
         }),
       );
 
@@ -209,6 +380,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
             const SnackBar(content: Text("Ulasan berhasil dihapus.")),
           );
           _reviewController.clear();
+          _reviewFotoBase64 = null;
           _selectedRating = 5;
           _myReview = null;
           await _fetchUlasan();
@@ -648,13 +820,87 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
           ),
           const SizedBox(height: 12),
 
+          // Photo Attachment Section
+          if (_reviewFotoBase64 != null) ...[
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.4)),
+              ),
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildReviewImage(
+                      _reviewFotoBase64!,
+                      height: 130,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
+                            tooltip: "Ganti Foto",
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: _showImagePickerOptions,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.white, size: 16),
+                            tooltip: "Hapus Foto",
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: () => setState(() => _reviewFotoBase64 = null),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ] else ...[
+            OutlinedButton.icon(
+              onPressed: _showImagePickerOptions,
+              icon: const Icon(Icons.add_a_photo_outlined, size: 16),
+              label: const Text("Tambah Foto dari Kamera / Galeri", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryColor,
+                side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Submit button
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
               onPressed: _isSubmitting ? null : _submitReview,
               icon: _isSubmitting
-                  ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : Icon(isEditing ? Icons.check : Icons.send, size: 16),
               label: Text(isEditing ? "Simpan Perubahan" : "Kirim Ulasan", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
               style: ElevatedButton.styleFrom(
@@ -698,6 +944,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
         final String namaUser = u['nama_user'] ?? 'Wisatawan';
         final int rating = (u['rating'] is num) ? (u['rating'] as num).toInt() : 5;
         final String ulasanText = u['ulasan'] ?? '';
+        final String? fotoUlasan = u['foto'];
         final bool isMine = u['milik_saya'] == true;
         final String? dateStr = u['created_at'];
         String formattedDate = "";
@@ -768,6 +1015,42 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                 Text(
                   ulasanText,
                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9), height: 1.4, fontFamily: 'Inter'),
+                ),
+              ],
+              if (fotoUlasan != null && fotoUlasan.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () => _showFullscreenImage(fotoUlasan),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        _buildReviewImage(
+                          fotoUlasan,
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                        Container(
+                          margin: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text("Lihat", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ],
