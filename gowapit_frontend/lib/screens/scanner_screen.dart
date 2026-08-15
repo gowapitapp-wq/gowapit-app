@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../theme_notifier.dart';
@@ -17,7 +18,14 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _codeController = TextEditingController();
+  final MobileScannerController _cameraController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    returnImage: false,
+  );
+
   bool _isLoading = false;
+  bool _isProcessingScan = false;
+  bool _isTorchOn = false;
   Map<String, dynamic>? _scanResult;
   String? _errorMessage;
 
@@ -47,6 +55,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
   @override
   void dispose() {
     _animController.dispose();
+    _cameraController.dispose();
     _codeController.dispose();
     super.dispose();
   }
@@ -79,6 +88,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Silakan masukkan atau scan kode tiket!"), backgroundColor: Colors.orange),
       );
+      _isProcessingScan = false;
       return;
     }
 
@@ -241,6 +251,10 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
             onPressed: () {
               Navigator.pop(ctx);
               _codeController.clear();
+              // Jeda sejenak sebelum mengizinkan scan berikutnya agar tidak ter-trigger ganda
+              Future.delayed(const Duration(milliseconds: 1000), () {
+                if (mounted) setState(() => _isProcessingScan = false);
+              });
             },
             child: const Text("Tutup"),
           ),
@@ -286,6 +300,9 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
             onPressed: () {
               Navigator.pop(ctx);
               _codeController.clear();
+              Future.delayed(const Duration(milliseconds: 1000), () {
+                if (mounted) setState(() => _isProcessingScan = false);
+              });
             },
             child: const Text("Selesai"),
           ),
@@ -309,7 +326,12 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
         content: Text(msg, style: const TextStyle(fontSize: 14)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Future.delayed(const Duration(milliseconds: 1000), () {
+                if (mounted) setState(() => _isProcessingScan = false);
+              });
+            },
             child: const Text("OK"),
           ),
         ],
@@ -506,77 +528,174 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
             ),
             const SizedBox(height: 20),
 
-            // --- SIMULATED CAMERA VIEWFINDER FRAME ---
+            // --- LIVE CAMERA SCANNER FRAME WITH MOBILE SCANNER ---
             Container(
               width: double.infinity,
-              height: 240,
+              height: 280,
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF141F1C) : const Color(0xFF1A2A26),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: celadonColor.withValues(alpha: 0.5), width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.2),
+                    color: primaryColor.withValues(alpha: 0.25),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Viewfinder Corners
-                  Positioned(top: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
-                  Positioned(top: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
-                  Positioned(bottom: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
-                  Positioned(bottom: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
-
-                  // Animated Scanning Laser Line
-                  AnimatedBuilder(
-                    animation: _scanLineAnimation,
-                    builder: (context, child) {
-                      return Positioned(
-                        top: 240 * _scanLineAnimation.value,
-                        left: 36,
-                        right: 36,
-                        child: Container(
-                          height: 3,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Colors.transparent, Color(0xFFD0EFB1), Color(0xFF9DC3C2), Colors.transparent],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // LIVE CAMERA PREVIEW
+                    MobileScanner(
+                      controller: _cameraController,
+                      onDetect: (BarcodeCapture capture) {
+                        if (_isProcessingScan || _isLoading) return;
+                        final List<Barcode> barcodes = capture.barcodes;
+                        for (final barcode in barcodes) {
+                          final String? code = barcode.rawValue;
+                          if (code != null && code.isNotEmpty) {
+                            setState(() => _isProcessingScan = true);
+                            _codeController.text = code;
+                            _validateTicketCode(code);
+                            break;
+                          }
+                        }
+                      },
+                      errorBuilder: (context, error, child) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.videocam_off_outlined, color: Colors.orangeAccent, size: 48),
+                                const SizedBox(height: 10),
+                                Text(
+                                  "Kamera tidak tersedia / Izin kamera belum diberikan.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  "Gunakan form input manual di bawah.",
+                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ],
                             ),
-                            boxShadow: [
-                              BoxShadow(color: const Color(0xFFD0EFB1).withValues(alpha: 0.8), blurRadius: 10, spreadRadius: 2),
-                            ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
 
-                  // QR Icon in Center
-                  Icon(
-                    Icons.qr_code_scanner_rounded,
-                    size: 76,
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
+                    // Viewfinder Corners Overlays
+                    Positioned(top: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
+                    Positioned(top: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
+                    Positioned(bottom: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
+                    Positioned(bottom: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
 
-                  // Helper text
-                  Positioned(
-                    bottom: 14,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        "Arahkan kamera ke QR Code Tiket",
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
+                    // Animated Scanning Laser Line
+                    AnimatedBuilder(
+                      animation: _scanLineAnimation,
+                      builder: (context, child) {
+                        return Positioned(
+                          top: 280 * _scanLineAnimation.value,
+                          left: 36,
+                          right: 36,
+                          child: Container(
+                            height: 3,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Colors.transparent, Color(0xFFD0EFB1), Color(0xFF9DC3C2), Colors.transparent],
+                              ),
+                              boxShadow: [
+                                BoxShadow(color: const Color(0xFFD0EFB1).withValues(alpha: 0.9), blurRadius: 12, spreadRadius: 3),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // Quick Camera Controls (Torch & Flip)
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: Row(
+                        children: [
+                          // Torch Button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                color: _isTorchOn ? Colors.amber : Colors.white70,
+                                size: 20,
+                              ),
+                              tooltip: "Senter Kamera",
+                              onPressed: () async {
+                                await _cameraController.toggleTorch();
+                                setState(() => _isTorchOn = !_isTorchOn);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Camera Flip Button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white70, size: 20),
+                              tooltip: "Ganti Kamera Depan/Belakang",
+                              onPressed: () => _cameraController.switchCamera(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+
+                    // Helper Bottom Text
+                    Positioned(
+                      bottom: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isProcessingScan) ...[
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text("Memvalidasi kode...", style: TextStyle(color: Colors.white, fontSize: 11)),
+                            ] else ...[
+                              const Icon(Icons.qr_code_scanner_rounded, size: 14, color: Colors.white70),
+                              const SizedBox(width: 6),
+                              const Text(
+                                "Arahkan kamera ke QR Code Tiket",
+                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

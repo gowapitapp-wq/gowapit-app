@@ -4,7 +4,7 @@ class ApiConfig {
   /// - Untuk Android Emulator: "http://10.0.2.2:8000"
   /// - Untuk HP Android Fisik via Wi-Fi: "http://<IP_LAPTOP_ANDA>:8000" (contoh: "http://192.168.1.5:8000")
   /// - Untuk Server Production (Railway/Cloud): "https://gowapit-backend-production-59b7.up.railway.app"
-  static String _overrideBaseUrl = "http://10.0.2.2:8000";
+  static String _overrideBaseUrl = "https://gowapit-backend-production-59b7.up.railway.app";
 
   /// Mengambil Base URL aktif
   static String get baseUrl => _overrideBaseUrl;

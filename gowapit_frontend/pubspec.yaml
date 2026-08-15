@@ -1,7 +1,7 @@
 name: gowapit_frontend
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.2.0+7
+version: 1.2.0+8
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -21,6 +21,7 @@ dependencies:
   image_picker: ^1.1.2
   lottie: ^3.1.2
   qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
 
 dev_dependencies:
   flutter_test:
