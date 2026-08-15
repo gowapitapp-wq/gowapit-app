@@ -16,16 +16,15 @@ class ScannerScreen extends StatefulWidget {
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProviderStateMixin {
+class _ScannerScreenState extends State<ScannerScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _codeController = TextEditingController();
-  final MobileScannerController _cameraController = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-    returnImage: false,
-  );
+  late MobileScannerController _cameraController;
 
   bool _isLoading = false;
   bool _isProcessingScan = false;
   bool _isTorchOn = false;
+  bool _isCameraRestarting = false;
   Map<String, dynamic>? _scanResult;
   String? _errorMessage;
 
@@ -40,6 +39,8 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initScannerController();
     _loadStaffProfile();
 
     _animController = AnimationController(
@@ -52,12 +53,45 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     );
   }
 
+  void _initScannerController() {
+    _cameraController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      returnImage: false,
+      autoStart: true,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      _cameraController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _cameraController.start();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
     _cameraController.dispose();
     _codeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _restartCamera() async {
+    setState(() => _isCameraRestarting = true);
+    try {
+      await _cameraController.stop();
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _cameraController.start();
+    } catch (e) {
+      debugPrint("Gagal me-restart kamera: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isCameraRestarting = false);
+      }
+    }
   }
 
   Future<void> _loadStaffProfile() async {
@@ -251,7 +285,6 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
             onPressed: () {
               Navigator.pop(ctx);
               _codeController.clear();
-              // Jeda sejenak sebelum mengizinkan scan berikutnya agar tidak ter-trigger ganda
               Future.delayed(const Duration(milliseconds: 1000), () {
                 if (mounted) setState(() => _isProcessingScan = false);
               });
@@ -531,7 +564,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
             // --- LIVE CAMERA SCANNER FRAME WITH MOBILE SCANNER ---
             Container(
               width: double.infinity,
-              height: 280,
+              height: 290,
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF141F1C) : const Color(0xFF1A2A26),
                 borderRadius: BorderRadius.circular(24),
@@ -566,23 +599,45 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                         }
                       },
                       errorBuilder: (context, error, child) {
+                        final String errCode = error.errorCode.name;
+                        final String errMsg = error.errorDetails?.message ?? "Inisialisasi kamera gagal";
+
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(20),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.videocam_off_outlined, color: Colors.orangeAccent, size: 48),
+                                const Icon(Icons.videocam_off_outlined, color: Colors.orangeAccent, size: 42),
                                 const SizedBox(height: 10),
                                 Text(
-                                  "Kamera tidak tersedia / Izin kamera belum diberikan.",
+                                  errCode == "permissionDenied"
+                                      ? "Izin kamera belum aktif di aplikasi"
+                                      : "Kamera perlu diinisialisasi ulang ($errCode)",
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                                 ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  "Gunakan form input manual di bawah.",
-                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                const SizedBox(height: 4),
+                                Text(
+                                  errMsg,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
+                                ),
+                                const SizedBox(height: 14),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  ),
+                                  onPressed: _isCameraRestarting ? null : _restartCamera,
+                                  icon: _isCameraRestarting
+                                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                      : const Icon(Icons.refresh_rounded, size: 16),
+                                  label: Text(_isCameraRestarting ? "Menghubungkan..." : "Aktifkan / Coba Lagi"),
                                 ),
                               ],
                             ),
@@ -602,7 +657,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                       animation: _scanLineAnimation,
                       builder: (context, child) {
                         return Positioned(
-                          top: 280 * _scanLineAnimation.value,
+                          top: 290 * _scanLineAnimation.value,
                           left: 36,
                           right: 36,
                           child: Container(
@@ -620,7 +675,22 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                       },
                     ),
 
-                    // Quick Camera Controls (Torch & Flip)
+                    // Quick Camera Controls (Restart, Torch & Flip)
+                    Positioned(
+                      top: 14,
+                      left: 14,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                          tooltip: "Muat Ulang Kamera",
+                          onPressed: _restartCamera,
+                        ),
+                      ),
+                    ),
                     Positioned(
                       top: 14,
                       right: 14,
