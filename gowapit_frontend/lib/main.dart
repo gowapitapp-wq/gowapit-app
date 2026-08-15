@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui'; // Wajib untuk efek BackdropFilter (Glassmorphism)
 import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,8 @@ import 'theme_notifier.dart';
 import 'screens/peta_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/tiket_screen.dart';
+import 'screens/scanner_screen.dart';
+import 'widgets/floating_dock.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,9 +41,6 @@ class GoWapitApp extends StatelessWidget {
           locale: context.locale,
           themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
 
-// =========================================================
-          // TRIK GLOBAL GRADIENT
-          // =========================================================
           builder: (context, child) {
             return Container(
               decoration: BoxDecoration(
@@ -50,17 +48,17 @@ class GoWapitApp extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: isDark
-                      ? [
-                          const Color(0xFF23362F), // Gelap Atas
-                          const Color(0xFF1B2824), // Gelap Tengah (Warna transisi baru)
-                          const Color(0xFF121212), // Gelap Bawah
-                        ] // <--- Sekarang jumlahnya 3 warna!
-                      : [
-                          const Color(0xFF7FA89B), // Hijau Sage
-                          const Color(0xFFE2EFE1), // Transisi Lembut
-                          Colors.white,            // Putih Bersih
-                        ], // <--- Ini juga 3 warna!
-                  stops: const [0.0, 0.5, 1.0], // 3 titik (Sempurna)
+                      ? const [
+                          Color(0xFF162524), // Light Blue Dark tint
+                          Color(0xFF17241C), // Celadon Dark tint
+                          Color(0xFF101614), // Base Dark
+                        ]
+                      : const [
+                          Color(0xFF9DC3C2), // Light Blue
+                          Color(0xFFB3D89C), // Celadon
+                          Color(0xFFD0EFB1), // Tea Green
+                        ],
+                  stops: const [0.0, 0.55, 1.0],
                 ),
               ),
               child: child,
@@ -74,9 +72,10 @@ class GoWapitApp extends StatelessWidget {
             // PENTING: Scaffold diatur transparan agar gradien dari builder di atas bisa terlihat
             scaffoldBackgroundColor: Colors.transparent, 
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF659287), 
-              secondary: Color(0xFF88BDA4), 
-              surface: Color(0xFFffffff),
+              primary: Color(0xFF5E9190), // Contras Light Blue for text/action
+              secondary: Color(0xFFB3D89C), // Celadon
+              tertiary: Color(0xFFD0EFB1), // Tea Green
+              surface: Color(0xFFFFFFFF),
               onSurface: Color(0xFF161d1b),
             ),
             useMaterial3: true,
@@ -89,9 +88,10 @@ class GoWapitApp extends StatelessWidget {
             // PENTING: Scaffold diatur transparan
             scaffoldBackgroundColor: Colors.transparent,
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF88BDA4),
-              secondary: Color(0xFF659287),
-              surface: Color(0xFF1C1C1E),
+              primary: Color(0xFF9DC3C2), // Light Blue
+              secondary: Color(0xFFB3D89C), // Celadon
+              tertiary: Color(0xFFD0EFB1), // Tea Green
+              surface: Color(0xFF1A2420),
             ),
             useMaterial3: true,
           ),
@@ -121,15 +121,24 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkLoginSession() async {
     final prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('jwt_token');
+    final String? role = prefs.getString('user_role');
 
     Timer(const Duration(milliseconds: 2000), () {
       if (!mounted) return;
       if (token != null && token.isNotEmpty) {
-        // Langsung ke Home Dashboard jika sudah login sebelumnya
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigator()),
-        );
+        // Jika akun ber-role Petugas, langsung ke halaman Scanner Petugas (tanpa dock)
+        if (role == 'petugas' || role == 'staff') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
+          );
+        } else {
+          // Pengunjung biasa ke Home Dashboard (dengan dock navigasi)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigator()),
+          );
+        }
       } else {
         // Ke halaman Onboarding jika belum login
         Navigator.pushReplacement(
@@ -188,63 +197,40 @@ class _MainNavigatorState extends State<MainNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryGreen = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
-
     return Scaffold(
       backgroundColor: Colors.transparent, // Biarkan gradien belakang menembus
-      extendBody: true, 
+      extendBody: true,
       body: _pages[_selectedIndex],
 
-      // Bottom Navigation dengan gaya Floating & Glassmorphism
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24), 
-            boxShadow: isDarkMode
-                ? []
-                : [
-                    BoxShadow(
-                        color: const Color(0xFF659287).withValues(alpha: 0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8))
-                  ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0), 
-              child: BottomNavigationBar(
-                elevation: 0,
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: isDarkMode
-                    ? const Color(0xFF1C1C1E).withValues(alpha: 0.8)
-                    : Colors.white.withValues(alpha: 0.7), 
-                selectedItemColor: primaryGreen,
-                unselectedItemColor: isDarkMode ? Colors.grey.shade600 : const Color(0xFF717976),
-                showSelectedLabels: true,
-                showUnselectedLabels: true,
-                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-                currentIndex: _selectedIndex,
-                onTap: _onItemTapped,
-                items: const [
-                  BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.home_filled)),
-                      label: 'Home'),
-                  BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.receipt_long)),
-                      label: 'Tiket'),
-                  BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.map_outlined)),
-                      label: 'Peta'),
-                  BottomNavigationBarItem(
-                      icon: Padding(padding: EdgeInsets.only(bottom: 4), child: Icon(Icons.person_outline)),
-                      label: 'Profil'),
-                ],
+      // Floating Animated Dock Navigation
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
+          child: FloatingDock(
+            selectedIndex: _selectedIndex,
+            onItemSelected: _onItemTapped,
+            items: const [
+              DockItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'Home',
               ),
-            ),
+              DockItem(
+                icon: Icons.confirmation_number_outlined,
+                activeIcon: Icons.confirmation_number_rounded,
+                label: 'Tiket',
+              ),
+              DockItem(
+                icon: Icons.map_outlined,
+                activeIcon: Icons.map_rounded,
+                label: 'Peta',
+              ),
+              DockItem(
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: 'Profil',
+              ),
+            ],
           ),
         ),
       ),

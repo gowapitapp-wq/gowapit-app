@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'onboarding_screen.dart';
+import 'login_screen.dart';
 import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkLoginSession() async {
     final prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('jwt_token');
+    final bool onboardingDone = prefs.getBool('onboarding_done') ?? false;
 
     Timer(const Duration(milliseconds: 2000), () {
       if (!mounted) return;
@@ -30,11 +32,17 @@ class _SplashScreenState extends State<SplashScreen> {
           context,
           MaterialPageRoute(builder: (context) => const MainNavigator()),
         );
-      } else {
-        // Ke halaman Onboarding jika belum login
+      } else if (!onboardingDone) {
+        // Ke halaman Onboarding jika belum pernah menyelesaikan onboarding
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      } else {
+        // Ke Login jika sudah pernah onboarding
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
     });
@@ -53,8 +61,8 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isDarkMode 
-                ? [const Color(0xFF23362F), const Color(0xFF121212)] 
-                : [const Color(0xFF659287), const Color(0xFF88BDA4), const Color(0xFFE6F2DD)],
+                ? [const Color(0xFF162524), const Color(0xFF101614)] 
+                : [const Color(0xFF9DC3C2), const Color(0xFFB3D89C), const Color(0xFFD0EFB1)],
           ),
         ),
         child: Column(
@@ -72,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   child: const Icon(
                     Icons.park_rounded, // Ikon pohon/alam
-                    color: Color(0xFF659287),
+                    color: Color(0xFF5E9190),
                     size: 32,
                   ),
                 ),

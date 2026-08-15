@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
 
@@ -20,6 +22,104 @@ class TiketPage extends StatefulWidget {
 class _TiketPageState extends State<TiketPage> {
   int _selectedTab = 0; 
   bool _isPaying = false; 
+  bool _isOfflineTickets = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPendingBookings();
+    _fetchMyTickets();
+  }
+
+  // --- SINKRONISASI TIKET DARI BACKEND DENGAN OFFLINE CACHE ---
+  Future<void> _fetchMyTickets() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      
+      // 1. Muat data dari Cache Lokal terlebih dahulu (agar instan/offline ready)
+      final String? cachedJson = prefs.getString('cached_user_tickets_json');
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final List<dynamic> cachedList = jsonDecode(cachedJson);
+        if (mounted) {
+          globalRiwayat.value = List<Map<String, dynamic>>.from(cachedList);
+        }
+      }
+
+      if (token == null || token.isEmpty) return;
+
+      // 2. Fetch data terbaru dari Backend
+      final res = await http.get(
+        ApiConfig.uri('/api/tickets/my'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (res.statusCode == 200 && mounted) {
+        final body = jsonDecode(res.body);
+        final List<dynamic> tickets = body['data'] ?? [];
+        final converted = List<Map<String, dynamic>>.from(tickets);
+        
+        globalRiwayat.value = converted;
+        // Simpan ke Cache Offline
+        await prefs.setString('cached_user_tickets_json', jsonEncode(converted));
+        setState(() => _isOfflineTickets = false);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isOfflineTickets = true);
+      }
+    }
+  }
+
+  Future<void> _fetchPendingBookings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+
+      final res = await http.get(
+        ApiConfig.uri('/api/booking'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body);
+        final List<dynamic> bookings = data['data'] ?? [];
+        final currentList = List<Map<String, dynamic>>.from(globalCart.value);
+        bool updated = false;
+
+        for (var b in bookings) {
+          final int bookingId = b['id'];
+          final exists = currentList.any((item) => item['booking_id'] == bookingId);
+          if (!exists) {
+            currentList.add({
+              'kategori': 'PAKET',
+              'booking_id': bookingId,
+              'nama': b['nama_paket'],
+              'jumlah_orang': b['jumlah_orang'],
+              'tanggal_mulai': b['tanggal_mulai'],
+              'tanggal_akhir': b['tanggal_akhir'],
+              'malam_tambahan': b['malam_tambahan'],
+              'diskon': b['diskon'],
+              'total_harga': b['total_harga'],
+              'harga': b['total_harga'],
+              'order_id': b['order_id'],
+              'qty': 1,
+            });
+            updated = true;
+          }
+        }
+
+        if (updated && mounted) {
+          globalCart.value = currentList;
+        }
+      }
+    } catch (_) {}
+  }
 
   String formatRupiah(int amount) {
     return "Rp ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}";
@@ -38,7 +138,7 @@ class _TiketPageState extends State<TiketPage> {
       builder: (context) {
         final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
         final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-        final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+        final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
         final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
 
         return Container(
@@ -74,7 +174,7 @@ class _TiketPageState extends State<TiketPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
                 leading: CircleAvatar(backgroundColor: Colors.blue.shade50, child: const Icon(Icons.payment, color: Colors.blue)),
                 title: Text("Midtrans Online Gateway", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
-                subtitle: const Text("Bayar via QRIS, Bank Transfer, Gopey di halaman Midtrans.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                subtitle: const Text("Bayar via QRIS, Bank Transfer, GoPay di halaman Midtrans.", style: TextStyle(fontSize: 12, color: Colors.grey)),
                 onTap: () {
                   Navigator.pop(context);
                   _eksekusiSelesaiBayar(grandTotal, isSimulasi: false);
@@ -92,23 +192,72 @@ class _TiketPageState extends State<TiketPage> {
     setState(() => _isPaying = true);
 
     try {
-      if (!isSimulasi) {
-        final orderData = {
-          "order_id": "WPT-${DateTime.now().millisecondsSinceEpoch}", 
-          "gross_amount": grandTotal, 
-          "customer_details": {
-            "first_name": "Petualang Wapit", 
-            "email": "petualang@gmail.com"
-          }
-        };
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final currentCart = List<Map<String, dynamic>>.from(globalCart.value);
+      final currentRiwayat = List<Map<String, dynamic>>.from(globalRiwayat.value);
+      String generatedOrderId = "INV/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
 
+      // 1. Eksekusi bayar untuk setiap item PAKET (booking_id) ke backend jika ada
+      for (var item in currentCart) {
+        if (item['kategori'] == 'PAKET' && item['booking_id'] != null && token != null) {
+          final int bookingId = item['booking_id'];
+          try {
+            final payRes = await http.post(
+              ApiConfig.uri('/api/booking/$bookingId/pay'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'mode': isSimulasi ? 'simulasi' : 'midtrans',
+              }),
+            );
+
+            if (payRes.statusCode == 200 && !isSimulasi) {
+              final payData = jsonDecode(payRes.body);
+              final String? redirectUrl = payData['redirect_url'];
+              if (redirectUrl != null && redirectUrl.isNotEmpty) {
+                final Uri paymentUri = Uri.parse(redirectUrl);
+                if (await canLaunchUrl(paymentUri)) {
+                  await launchUrl(paymentUri, mode: LaunchMode.externalApplication);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 2. Jika ada item kuliner dan bayar via Midtrans online, buat transaksi Midtrans checkout umum
+      int totalKulinerQty = 0;
+      int totalKulinerHarga = 0;
+      List<String> namaKulinerList = [];
+
+      for (var item in currentCart) {
+        if (item['kategori'] == 'KULINER') {
+          int hargaItem = int.tryParse(item['harga'].toString()) ?? 0;
+          int qty = item['qty'] ?? 1;
+          totalKulinerQty += qty;
+          totalKulinerHarga += (hargaItem * qty);
+          namaKulinerList.add(item['nama']);
+        }
+      }
+
+      if (totalKulinerQty > 0 && !isSimulasi) {
         try {
+          final orderData = {
+            "order_id": "WPT-KULINER-${DateTime.now().millisecondsSinceEpoch}", 
+            "gross_amount": totalKulinerHarga, 
+            "customer_details": {
+              "first_name": "Petualang Wapit", 
+              "email": "petualang@gmail.com"
+            }
+          };
           final response = await http.post(
             ApiConfig.uri('/api/checkout'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(orderData),
           );
-
           if (response.statusCode == 200) {
             final responseData = jsonDecode(response.body);
             final String? redirectUrl = responseData['redirect_url'];
@@ -122,32 +271,23 @@ class _TiketPageState extends State<TiketPage> {
         } catch (_) {}
       }
 
-      // Transfer keranjang ke tab Berhasil / Riwayat E-Tiket
-      final currentRiwayat = List<Map<String, dynamic>>.from(globalRiwayat.value);
-      final currentCart = List<Map<String, dynamic>>.from(globalCart.value);
-      
-      String generatedOrderId = "INV/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
-
-      int totalKulinerQty = 0;
-      int totalKulinerHarga = 0;
-      List<String> namaKulinerList = [];
-
+      // 3. Masukkan item-item ke Riwayat E-Tiket
       for (var item in currentCart) {
-        int hargaItem = int.tryParse(item['harga'].toString()) ?? 0;
-        int qty = item['qty'] ?? 1;
+        if (item['kategori'] == 'PAKET') {
+          String tglPakai = item['tanggal_mulai'] ?? 'Berlaku Hari Ini';
+          if (item['tanggal_akhir'] != null && item['tanggal_akhir'].toString().isNotEmpty) {
+            tglPakai = "${item['tanggal_mulai']} s/d ${item['tanggal_akhir']}";
+          }
+          final int itemTotal = int.tryParse((item['total_harga'] ?? item['harga'] ?? 0).toString()) ?? 0;
+          final int orang = item['jumlah_orang'] ?? item['qty'] ?? 1;
 
-        if (item['kategori'] == 'KULINER') {
-          totalKulinerQty += qty;
-          totalKulinerHarga += (hargaItem * qty);
-          namaKulinerList.add(item['nama']);
-        } else {
           currentRiwayat.insert(0, { 
-            'kategori': item['kategori'],
+            'kategori': 'PAKET',
             'nama': item['nama'],
-            'tanggal_pakai': 'Berlaku Hari Ini',
-            'order_id': generatedOrderId,
-            'qty': qty,
-            'total_harga': formatRupiah(hargaItem * qty),
+            'tanggal_pakai': tglPakai,
+            'order_id': item['order_id'] ?? generatedOrderId,
+            'qty': orang,
+            'total_harga': formatRupiah(itemTotal),
             'status': 'Aktif', 
           });
         }
@@ -197,7 +337,7 @@ class _TiketPageState extends State<TiketPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
     final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
 
     return Scaffold(
@@ -207,7 +347,7 @@ class _TiketPageState extends State<TiketPage> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Text("Keranjang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Montserrat')),
+        title: const Text("Keranjang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Montserrat')),
       ),
       body: Column(
         children: [
@@ -246,10 +386,10 @@ class _TiketPageState extends State<TiketPage> {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
     final Color tagBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFeef5f2);
     final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
-    final List<BoxShadow> ambientShadow = isDarkMode ? [] : [BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))];
+    final List<BoxShadow> ambientShadow = isDarkMode ? [] : [BoxShadow(color: const Color(0xFF5E9190).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))];
 
     return ValueListenableBuilder<List<Map<String, dynamic>>>(
       valueListenable: globalCart,
@@ -271,16 +411,20 @@ class _TiketPageState extends State<TiketPage> {
 
         int totalHargaBarang = 0;
         int totalBarang = 0;
+        int totalDiskon = 0;
+
         for (var item in cartItems) {
-          int harga = int.tryParse(item['harga'].toString()) ?? 0;
+          int harga = int.tryParse((item['total_harga'] ?? item['harga'] ?? 0).toString()) ?? 0;
           int qty = item['qty'] ?? 1;
           totalHargaBarang += (harga * qty);
-          totalBarang += qty;
+          totalBarang += (item['kategori'] == 'PAKET' ? (item['jumlah_orang'] ?? qty) : qty) as int;
+          if (item['diskon'] != null) {
+            totalDiskon += (item['diskon'] as num).toInt();
+          }
         }
 
-        int diskon = 0; 
         int biayaLayanan = 2000;
-        int grandTotal = totalHargaBarang - diskon + biayaLayanan;
+        int grandTotal = totalHargaBarang + biayaLayanan;
 
         return ListView(
           padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
@@ -307,9 +451,11 @@ class _TiketPageState extends State<TiketPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildSummaryRow("Total Harga ($totalBarang Barang)", formatRupiah(totalHargaBarang), textColor),
-                  const SizedBox(height: 8),
-                  _buildSummaryRow("Diskon", "- ${formatRupiah(diskon)}", const Color(0xFF4CAF50)),
+                  _buildSummaryRow("Total Harga ($totalBarang Item/Tiket)", formatRupiah(totalHargaBarang + totalDiskon), textColor),
+                  if (totalDiskon > 0) ...[
+                    const SizedBox(height: 8),
+                    _buildSummaryRow("Diskon Voucher", "- ${formatRupiah(totalDiskon)}", const Color(0xFF4CAF50)),
+                  ],
                   const SizedBox(height: 8),
                   _buildSummaryRow("Biaya Layanan", formatRupiah(biayaLayanan), textColor),
                   Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(color: dividerColor)),
@@ -358,45 +504,81 @@ class _TiketPageState extends State<TiketPage> {
   }
 
   // ===========================================================================
-  // SECTION 2: BERHASIL (E-TIKET DINAMIS)
+  // SECTION 2: BERHASIL (E-TIKET DINAMIS DENGAN OFFLINE CACHE)
   // ===========================================================================
   Widget _buildBerhasilSection(bool isDarkMode, Color primaryColor) {
-    return ValueListenableBuilder<List<Map<String, dynamic>>>(
-      valueListenable: globalRiwayat,
-      builder: (context, riwayatItems, child) {
-        if (riwayatItems.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _fetchMyTickets,
+      color: primaryColor,
+      child: ValueListenableBuilder<List<Map<String, dynamic>>>(
+        valueListenable: globalRiwayat,
+        builder: (context, riwayatItems, child) {
+          if (riwayatItems.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Icon(Icons.confirmation_number_outlined, size: 80, color: primaryColor.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                Text("Belum ada tiket yang dibayar.", style: TextStyle(color: primaryColor, fontFamily: 'Inter')),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.confirmation_number_outlined, size: 80, color: primaryColor.withValues(alpha: 0.3)),
+                      const SizedBox(height: 16),
+                      Text("Belum ada tiket yang dibayar.", style: TextStyle(color: primaryColor, fontFamily: 'Inter')),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
-          itemCount: riwayatItems.length,
-          itemBuilder: (context, index) {
-            return BerhasilTicketCard(
-              data: riwayatItems[index],
-              isDarkMode: isDarkMode,
             );
-          },
-        );
-      },
+          }
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
+            itemCount: riwayatItems.length + (_isOfflineTickets ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (_isOfflineTickets && index == 0) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.offline_bolt_rounded, color: Colors.amber, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Mode Offline: E-Tiket tersimpan di memori HP & tetap siap di-scan.",
+                          style: TextStyle(fontSize: 12, color: Colors.amber, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final actualIndex = _isOfflineTickets ? index - 1 : index;
+              return BerhasilTicketCard(
+                data: riwayatItems[actualIndex],
+                isDarkMode: isDarkMode,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  // --- WIDGET PELENGKAP ---
+  // --- WIDGET CART ITEM (Mendukung PAKET & KULINER) ---
   Widget _buildCartItem(
     int index, Map<String, dynamic> item, bool isDarkMode, Color cardColor, Color textColor, 
     Color subTextColor, Color primaryColor, Color tagBgColor, Color dividerColor, List<BoxShadow> shadow
   ) {
-    int harga = int.tryParse(item['harga'].toString()) ?? 0;
+    final bool isPaket = item['kategori'] == 'PAKET';
+    final int harga = int.tryParse((item['total_harga'] ?? item['harga'] ?? 0).toString()) ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -404,21 +586,33 @@ class _TiketPageState extends State<TiketPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Gambar / Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              ((item['gambar'] ?? 'assets/images/placeholder.jpeg').toString().startsWith('assets/'))
-                  ? item['gambar']
-                  : 'assets/${item['gambar']}',
-              width: 70, height: 70, fit: BoxFit.cover, 
-              errorBuilder: (c, e, s) => Container(width: 70, height: 70, color: dividerColor, child: Icon(Icons.image_outlined, color: subTextColor))
-            ),
+            child: isPaket
+                ? Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.confirmation_number_outlined, color: primaryColor, size: 36),
+                  )
+                : Image.asset(
+                    ((item['gambar'] ?? 'assets/images/placeholder.jpeg').toString().startsWith('assets/'))
+                        ? item['gambar']
+                        : 'assets/${item['gambar']}',
+                    width: 70, height: 70, fit: BoxFit.cover, 
+                    errorBuilder: (c, e, s) => Container(width: 70, height: 70, color: dividerColor, child: Icon(Icons.image_outlined, color: subTextColor))
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Tag & Tombol Hapus
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -428,7 +622,20 @@ class _TiketPageState extends State<TiketPage> {
                       child: Text(item['kategori'] ?? 'ITEM', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 0.5)),
                     ),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
+                        // Jika item paket dengan booking_id, batalkan ke backend
+                        if (isPaket && item['booking_id'] != null) {
+                          final prefs = await SharedPreferences.getInstance();
+                          final token = prefs.getString('jwt_token');
+                          if (token != null) {
+                            try {
+                              await http.delete(
+                                ApiConfig.uri('/api/booking/${item['booking_id']}'),
+                                headers: {'Authorization': 'Bearer $token'},
+                              );
+                            } catch (_) {}
+                          }
+                        }
                         final currentList = List<Map<String, dynamic>>.from(globalCart.value);
                         currentList.removeAt(index);
                         globalCart.value = currentList; 
@@ -440,41 +647,74 @@ class _TiketPageState extends State<TiketPage> {
                 const SizedBox(height: 8),
                 Text(item['nama'] ?? '-', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: textColor, fontFamily: 'Montserrat'), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(item['kedai'] ?? item['subtitle'] ?? '-', style: TextStyle(fontSize: 11, color: subTextColor)),
+
+                // Subtitle / Info Detail
+                if (isPaket) ...[
+                  Text(
+                    item['tanggal_akhir'] != null && item['tanggal_akhir'].toString().isNotEmpty
+                        ? "📅 ${item['tanggal_mulai']} s/d ${item['tanggal_akhir']}"
+                        : "📅 ${item['tanggal_mulai'] ?? '-'}",
+                    style: TextStyle(fontSize: 11, color: subTextColor, fontFamily: 'Inter'),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text("👥 ${item['jumlah_orang'] ?? 1} Orang", style: TextStyle(fontSize: 11, color: subTextColor, fontFamily: 'Inter')),
+                      if (item['malam_tambahan'] != null && item['malam_tambahan'] > 0) ...[
+                        const SizedBox(width: 6),
+                        Text("• ⛺ ${item['malam_tambahan']} Malam", style: TextStyle(fontSize: 11, color: subTextColor, fontFamily: 'Inter')),
+                      ],
+                    ],
+                  ),
+                  if (item['diskon'] != null && item['diskon'] > 0) ...[
+                    const SizedBox(height: 2),
+                    Text("🏷️ Hemat ${formatRupiah(item['diskon'])}", style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
+                  ],
+                ] else ...[
+                  Text(item['kedai'] ?? item['subtitle'] ?? '-', style: TextStyle(fontSize: 11, color: subTextColor)),
+                ],
+
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(formatRupiah(harga), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: tagBgColor, borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              if (item['qty'] > 1) {
+                    if (isPaket)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: tagBgColor, borderRadius: BorderRadius.circular(8)),
+                        child: Text("${item['jumlah_orang'] ?? 1} Tiket", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: textColor)),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: tagBgColor, borderRadius: BorderRadius.circular(8)),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                if (item['qty'] > 1) {
+                                  final currentList = List<Map<String, dynamic>>.from(globalCart.value);
+                                  currentList[index]['qty']--;
+                                  globalCart.value = currentList;
+                                }
+                              },
+                              child: Icon(Icons.remove, size: 16, color: subTextColor)
+                            ),
+                            const SizedBox(width: 12),
+                            Text("${item['qty']}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () {
                                 final currentList = List<Map<String, dynamic>>.from(globalCart.value);
-                                currentList[index]['qty']--;
+                                currentList[index]['qty']++;
                                 globalCart.value = currentList;
-                              }
-                            },
-                            child: Icon(Icons.remove, size: 16, color: subTextColor)
-                          ),
-                          const SizedBox(width: 12),
-                          Text("${item['qty']}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () {
-                              final currentList = List<Map<String, dynamic>>.from(globalCart.value);
-                              currentList[index]['qty']++;
-                              globalCart.value = currentList;
-                            },
-                            child: Icon(Icons.add, size: 16, color: primaryColor)
-                          ),
-                        ],
-                      ),
-                    )
+                              },
+                              child: Icon(Icons.add, size: 16, color: primaryColor)
+                            ),
+                          ],
+                        ),
+                      )
                   ],
                 )
               ],
@@ -498,7 +738,14 @@ class _TiketPageState extends State<TiketPage> {
   Widget _buildTabButton(String title, int index, bool isDarkMode, Color primaryColor) {
     bool isSelected = _selectedTab == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
+      onTap: () {
+        setState(() => _selectedTab = index);
+        if (index == 0) {
+          _fetchPendingBookings();
+        } else if (index == 1) {
+          _fetchMyTickets();
+        }
+      },
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
@@ -546,39 +793,68 @@ class BerhasilTicketCard extends StatelessWidget {
                   "E-Tiket Go Wapit", 
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 
-                // --- KODE QR DIPERBESAR & WARNA HITAM ---
+                // --- KODE QR DINAMIS DENGAN QR_FLUTTER ---
                 Container(
-                  width: 200,  // Diperbesar dari 160 ke 200
-                  height: 200, // Diperbesar dari 160 ke 200
+                  width: 210,
+                  height: 210,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white, // Wajib putih agar alat scan bisa membacanya
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300, width: 2) // Tambahan garis tepi tipis
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFB3D89C), width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.qr_code_2, 
-                      size: 180, // Diperbesar dari 120 ke 180
-                      color: Colors.black // Diubah menjadi hitam pekat
+                  child: Center(
+                    child: QrImageView(
+                      data: data['ticket_code'] ?? data['order_id'] ?? 'WPT-TICKET',
+                      version: QrVersions.auto,
+                      size: 186,
+                      backgroundColor: Colors.white,
+                      errorCorrectionLevel: QrErrorCorrectLevel.M,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 
-                Text(data['order_id'] ?? '-', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: subTextColor, fontFamily: 'Inter')),
-                const SizedBox(height: 24),
+                // Kode Tiket
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFF2F6F4),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    data['ticket_code'] ?? data['order_id'] ?? '-',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: primaryColor,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
                 
                 Divider(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200, thickness: 1),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 
                 // Rincian Pesanan
                 _buildDetailRow("Kategori", data['kategori'] ?? '-', subTextColor, textColor),
                 const SizedBox(height: 12),
                 _buildDetailRow("Item", data['nama'] ?? '-', subTextColor, textColor),
                 const SizedBox(height: 12),
-                _buildDetailRow("Jumlah", "${data['qty']} Item", subTextColor, textColor),
+                _buildDetailRow("Jumlah", "${data['qty']} ${data['kategori'] == 'PAKET' ? 'Orang' : 'Item'}", subTextColor, textColor),
+                const SizedBox(height: 12),
+                _buildDetailRow("Tanggal", data['tanggal_pakai'] ?? '-', subTextColor, textColor),
                 
                 const SizedBox(height: 24),
                 
@@ -652,7 +928,7 @@ class BerhasilTicketCard extends StatelessWidget {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
     const Color successColor = Color(0xFF4CAF50);
     final Color dividerColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
     final bool isAktif = data['status'] == 'Aktif';
@@ -663,7 +939,7 @@ class BerhasilTicketCard extends StatelessWidget {
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: isDarkMode ? [] : [
-          BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: const Color(0xFF5E9190).withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -718,7 +994,7 @@ class BerhasilTicketCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(data['tanggal_pakai'] ?? '-', style: TextStyle(fontSize: 12, color: subTextColor, fontFamily: 'Inter')),
                       const SizedBox(height: 8),
-                      Text("${data['qty']} Item • ${data['total_harga']}", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: primaryColor, fontFamily: 'Inter')),
+                      Text("${data['qty']} ${data['kategori'] == 'PAKET' ? 'Orang' : 'Item'} • ${data['total_harga']}", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: primaryColor, fontFamily: 'Inter')),
                     ],
                   ),
                 ),

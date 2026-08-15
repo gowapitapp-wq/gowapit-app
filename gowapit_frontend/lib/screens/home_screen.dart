@@ -6,8 +6,9 @@ import 'dart:async'; // Diperlukan untuk Timer Carousel
 import '../config/api_config.dart';
 import 'cuaca_screen.dart';
 import 'destinasi_screen.dart';
+import 'detail_destinasi_screen.dart';
 import 'kuliner_screen.dart';
-import 'paket_screen.dart';
+import 'booking_screen.dart';
 import 'layanan_umum_screen.dart';
 import 'search_screen.dart';
 
@@ -29,6 +30,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
   // Variabel User
   String _namaPengguna = "Petualang";
   
+  // Variabel Destinasi Populer
+  List<dynamic> _popularDestinasi = [];
+  List<dynamic> _allDestinasi = [];
+  bool _isLoadingDestinasi = true;
+
   // Variabel Carousel Berita
   final PageController _pageController = PageController();
   Timer? _carouselTimer;
@@ -39,6 +45,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     super.initState();
     _fetchWeatherData();
     _fetchUserData(); // Memanggil data user login
+    _fetchDestinasiData(); // Memanggil data destinasi populer dari backend
     
     // Setup Auto-Scroll Carousel (Geser tiap 3 detik)
     _carouselTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
@@ -51,6 +58,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
         _pageController.animateToPage(_currentPage, duration: const Duration(milliseconds: 350), curve: Curves.easeIn);
       }
     });
+  }
+
+  // --- API DESTINASI POPULER LOGIC ---
+  Future<void> _fetchDestinasiData() async {
+    try {
+      final response = await http.get(ApiConfig.uri("/api/destinasi"));
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> list = data['data'] ?? [];
+        _allDestinasi = list;
+        // Urutkan berdasarkan rating tertinggi (descending)
+        List<dynamic> sorted = List.from(list);
+        sorted.sort((a, b) {
+          num ratingA = (a['rating'] is num) ? a['rating'] : 0;
+          num ratingB = (b['rating'] is num) ? b['rating'] : 0;
+          return ratingB.compareTo(ratingA);
+        });
+        setState(() {
+          _popularDestinasi = sorted.take(4).toList();
+          _isLoadingDestinasi = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingDestinasi = false);
+    }
   }
 
   @override
@@ -126,143 +158,154 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
-    const Color secondaryColor = Color(0xFF88BDA4);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    const Color secondaryColor = Color(0xFFB3D89C);
     
     final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))
+      BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.16), blurRadius: 15, offset: const Offset(0, 6))
     ];
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 15, bottom: 120),
-          children: [
-            // --- 1. HEADER (TERINTEGRASI API USER) ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(radius: 20, backgroundImage: AssetImage('assets/images/default_avatar.png')),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          color: primaryColor,
+          onRefresh: () async {
+            await _fetchWeatherData();
+            await _fetchUserData();
+            await _fetchDestinasiData();
+          },
+          child: ListView(
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 15, bottom: 120),
+            children: [
+              // --- 1. HEADER (TERINTEGRASI API USER) ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const CircleAvatar(radius: 20, backgroundImage: AssetImage('assets/images/default_avatar.png')),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Welcome Back,", style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
+                          Text(_namaPengguna, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Montserrat')),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
                       children: [
-                        Text("Welcome Back,", style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
-                        Text(_namaPengguna, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Montserrat')),
+                        Icon(_weatherIcon, color: isDarkMode ? const Color(0xFF121212) : Colors.white, size: 14),
+                        const SizedBox(width: 6),
+                        Text(_isLoadingWeather ? "--" : _currentTemp, style: TextStyle(color: isDarkMode ? const Color(0xFF121212) : Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
                       ],
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // --- 2. SEARCH BAR ---
+              GestureDetector(
+                onTap: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen()));
+                  _fetchDestinasiData();
+                },
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDarkMode ? Colors.grey.shade800 : secondaryColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: secondaryColor, size: 20),
+                      const SizedBox(width: 12),
+                      Text("Cari destinasi, tiket, atau kuliner...", style: TextStyle(color: subTextColor, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // --- 3. CAROUSEL BERITA / PROMO ---
+              SizedBox(
+                height: 170, // Tinggi area carousel
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (int page) {
+                    setState(() { _currentPage = page; });
+                  },
+                  children: [
+                    _buildPromoCard(
+                      "Promo", 
+                      "Diskon 30% Tiket Masuk", 
+                      "Berlaku untuk kunjungan akhir pekan ini. Jangan sampai kehabisan!", 
+                      primaryColor, 
+                      isDarkMode, 
+                      ambientShadow,
+                      'assets/images/BeritaDiskon.png'
+                    ),
+                    _buildPromoCard(
+                      "Event", 
+                      "Festival Kopi Temanggung", 
+                      "Nikmati seduhan kopi Arabika gratis dari petani lokal Jumprit.", 
+                      const Color(0xFF44634e), 
+                      isDarkMode, 
+                      ambientShadow,
+                      'assets/images/BeritaFestivalKopi.png'
+                    ),
+                    _buildPromoCard(
+                      "Info", 
+                      "Wahana High Rope Dibuka!", 
+                      "Uji adrenalinmu di wahana terbaru Hutan Pinus Wapit.", 
+                      const Color(0xFFD32F2F), 
+                      isDarkMode, 
+                      ambientShadow,
+                      'assets/images/HighRope.jpg'
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
-                  child: Row(
-                    children: [
-                      Icon(_weatherIcon, color: isDarkMode ? const Color(0xFF121212) : Colors.white, size: 14),
-                      const SizedBox(width: 6),
-                      Text(_isLoadingWeather ? "--" : _currentTemp, style: TextStyle(color: isDarkMode ? const Color(0xFF121212) : Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                    ],
-                  ),
-                )
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // --- 2. SEARCH BAR ---
-            GestureDetector(
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen()));
-              },
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDarkMode ? Colors.grey.shade800 : secondaryColor.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: secondaryColor, size: 20),
-                    const SizedBox(width: 12),
-                    Text("Cari destinasi, tiket, atau kuliner...", style: TextStyle(color: subTextColor, fontSize: 13)),
-                  ],
-                ),
               ),
-            ),
-            const SizedBox(height: 32),
+              
+              // Titik Indikator Carousel
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 6,
+                  width: _currentPage == index ? 20 : 6,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index ? primaryColor : primaryColor.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 32),
 
-            // --- 3. CAROUSEL BERITA / PROMO ---
-            SizedBox(
-              height: 170, // Tinggi area carousel
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (int page) {
-                  setState(() { _currentPage = page; });
-                },
+              // --- 4. GRID MENU IKON ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildPromoCard(
-                    "Promo", 
-                    "Diskon 30% Tiket Masuk", 
-                    "Berlaku untuk kunjungan akhir pekan ini. Jangan sampai kehabisan!", 
-                    primaryColor, 
-                    isDarkMode, 
-                    ambientShadow,
-                    'assets/images/BeritaDiskon.png'
-                  ),
-                  _buildPromoCard(
-                    "Event", 
-                    "Festival Kopi Temanggung", 
-                    "Nikmati seduhan kopi Arabika gratis dari petani lokal Jumprit.", 
-                    const Color(0xFF44634e), 
-                    isDarkMode, 
-                    ambientShadow,
-                    'assets/images/BeritaFestivalKopi.png'
-                  ),
-                  _buildPromoCard(
-                    "Info", 
-                    "Wahana High Rope Dibuka!", 
-                    "Uji adrenalinmu di wahana terbaru Hutan Pinus Wapit.", 
-                    const Color(0xFFD32F2F), 
-                    isDarkMode, 
-                    ambientShadow,
-                    'assets/images/HighRope.jpg'
-                  ),
+                  _buildMenuIcon(Icons.landscape, "Destinasi", cardColor, primaryColor, textColor, ambientShadow, () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage()));
+                    _fetchDestinasiData();
+                  }),
+                  _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
+                  _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()))),
+                  _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
                 ],
               ),
-            ),
-            
-            // Titik Indikator Carousel
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 6,
-                width: _currentPage == index ? 20 : 6,
-                decoration: BoxDecoration(
-                  color: _currentPage == index ? primaryColor : primaryColor.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              )),
-            ),
-            const SizedBox(height: 32),
-
-            // --- 4. GRID MENU IKON ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildMenuIcon(Icons.landscape, "Destinasi", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage()))),
-                _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
-                _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PaketPage()))),
-                _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
-              ],
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
             // --- 5. WIDGET CUACA KACA ---
             GestureDetector(
@@ -309,38 +352,55 @@ class _HomeDashboardState extends State<HomeDashboard> {
             // --- 6. DESTINASI POPULER (VERTIKAL) ---
             Text("Destinasi Populer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor, fontFamily: 'Montserrat')),
             const SizedBox(height: 16),
-            Column(
-              children: [
-                _buildPopularCardVertical(
-                  "Hutan Pinus", "4.8", 
-                  "Hutan asri dan sejuk di kaki Gunung Sindoro dengan deretan pohon pinus menjulang tinggi.", // Menggantikan harga
-                  'assets/images/HutanPinus.jpeg', 
-                  cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
-                ),
-                const SizedBox(height: 16),
-                _buildPopularCardVertical(
-                  "Mata Air Suci", "4.9", 
-                  "Mata air jernih abadi bernilai spiritual yang menjadi sumber aliran Sungai Progo.", // Menggantikan harga
-                  'assets/images/MataAirSuci.jpeg', 
-                  cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
-                ),
-                const SizedBox(height: 16),
-                _buildPopularCardVertical(
-                  "Flying Fox", "4.7", 
-                  "Wahana meluncur pemacu adrenalin untuk menikmati panorama hutan dari ketinggian.", // Menggantikan harga
-                  'assets/images/FlyingFox.jpeg',
-                  cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
-                ),
-                const SizedBox(height: 16),
-                _buildPopularCardVertical(
-                  "Tari Wedok Tegowanuh", "4.5", 
-                  "Tari Wedok Tegowanuh merupakan tarian khas Kaloran, Temanggung, yang rutin ditampilkan di Wisata Wapit (Wisata Alam Umbul Jumprit) sebagai upaya melestarikan warisan budaya sekaligus menarik minat wisatawan.", // Menggantikan harga
-                  'assets/images/Tari.jpeg',
-                  cardColor, textColor, subTextColor, primaryColor, secondaryColor, ambientShadow
-                ),
-              ],
-            ),
-          ],
+            if (_isLoadingDestinasi)
+              Center(child: Padding(padding: const EdgeInsets.all(24.0), child: CircularProgressIndicator(color: primaryColor)))
+            else if (_popularDestinasi.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
+                child: Center(child: Text("Belum ada destinasi.", style: TextStyle(color: subTextColor))),
+              )
+            else
+              Column(
+                children: _popularDestinasi.map((item) {
+                  final String title = item['name'] ?? item['nama'] ?? 'Destinasi Wapit';
+                  final num ratingNum = (item['rating'] is num) ? item['rating'] : 0.0;
+                  final String ratingStr = ratingNum > 0 ? ratingNum.toStringAsFixed(1) : "Baru";
+                  final String description = item['deskripsi_pendek'] ?? item['deskripsi_panjang'] ?? item['deskripsi_singkat'] ?? '-';
+                  String rawGambar = item['image'] ?? item['gambar'] ?? 'assets/images/placeholder.jpeg';
+                  final String imagePath = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: _buildPopularCardVertical(
+                      title,
+                      ratingStr,
+                      description,
+                      imagePath,
+                      cardColor,
+                      textColor,
+                      subTextColor,
+                      primaryColor,
+                      secondaryColor,
+                      ambientShadow,
+                      () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailDestinasiPage(
+                              data: item,
+                              allDestinasi: _allDestinasi,
+                            ),
+                          ),
+                        );
+                        _fetchDestinasiData();
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -432,46 +492,78 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
   }
 
   // Desain Kartu Populer Diubah Menjadi Vertikal Penuh
-  Widget _buildPopularCardVertical(String title, String rating, String description, String imagePath, Color cardColor, Color textColor, Color subTextColor, Color primaryColor, Color secondaryColor, List<BoxShadow> shadow) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.asset(imagePath, height: 160, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(height: 160, color: Colors.grey.shade300, child: const Icon(Icons.image, color: Colors.grey))),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor, fontFamily: 'Montserrat')),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: secondaryColor, size: 16),
-                        const SizedBox(width: 4),
-                        Text(rating, style: TextStyle(fontSize: 14, color: subTextColor, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
+  Widget _buildPopularCardVertical(
+    String title,
+    String rating,
+    String description,
+    String imagePath,
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+    Color primaryColor,
+    Color secondaryColor,
+    List<BoxShadow> shadow,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.asset(
+                imagePath,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(
+                  height: 160,
+                  color: Colors.grey.shade300,
+                  child: const Icon(Icons.image, color: Colors.grey),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description, 
-                  style: TextStyle(fontSize: 13, height: 1.5, color: subTextColor), 
-                  maxLines: 2, // Dibatasi maksimal 2 baris agar tetap rapi
-                  overflow: TextOverflow.ellipsis
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor, fontFamily: 'Montserrat'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(rating, style: TextStyle(fontSize: 14, color: subTextColor, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description, 
+                    style: TextStyle(fontSize: 13, height: 1.5, color: subTextColor), 
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

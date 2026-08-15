@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/api_config.dart';
 import 'detail_destinasi_screen.dart';
 import 'kuliner_screen.dart';
-import 'paket_screen.dart';
+import 'booking_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -32,8 +34,33 @@ class _SearchScreenState extends State<SearchScreen> {
 
       List<Map<String, dynamic>> items = [];
 
-      // 1. Destinasi
-      if (data['wisata'] != null) {
+      // 1. Destinasi (Menggunakan API Backend)
+      List<dynamic> apiDestinasi = [];
+      try {
+        final destResponse = await http.get(ApiConfig.uri("/api/destinasi"));
+        if (destResponse.statusCode == 200) {
+          final destData = jsonDecode(destResponse.body);
+          apiDestinasi = destData['data'] ?? [];
+        }
+      } catch (_) {}
+
+      if (apiDestinasi.isNotEmpty) {
+        for (var item in apiDestinasi) {
+          final String namaDest = item['name'] ?? item['nama'] ?? 'Destinasi';
+          final String descDest = item['deskripsi_pendek'] ?? item['deskripsi_singkat'] ?? item['deskripsi_panjang'] ?? '';
+          final String rawImg = item['image'] ?? item['gambar'] ?? 'assets/images/placeholder.jpeg';
+          final num rating = (item['rating'] is num) ? item['rating'] : 0.0;
+          items.add({
+            'type': 'Destinasi',
+            'nama': namaDest,
+            'deskripsi': rating > 0 ? "★ ${rating.toStringAsFixed(1)} • $descDest" : descDest,
+            'gambar': rawImg,
+            'raw': item,
+            'allWisata': apiDestinasi
+          });
+        }
+      } else if (data['wisata'] != null) {
+        // Fallback jika offline / backend gagal
         for (var item in data['wisata']) {
           items.add({
             'type': 'Destinasi',
@@ -179,7 +206,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -303,7 +330,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 } else if (item['type'] == 'Kuliner') {
                                   Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()));
                                 } else if (item['type'] == 'Tiket') {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PaketPage()));
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()));
                                 }
                               },
                             ),

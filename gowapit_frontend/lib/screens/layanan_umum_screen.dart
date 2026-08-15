@@ -82,10 +82,10 @@ class _LayananUmumPageState extends State<LayananUmumPage> {
     final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFF4F9F4);
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
 
     final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))
+      BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.16), blurRadius: 12, offset: const Offset(0, 4))
     ];
 
     return Scaffold(

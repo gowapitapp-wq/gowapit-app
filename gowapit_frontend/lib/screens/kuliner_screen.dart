@@ -120,15 +120,15 @@ class _KulinerPageState extends State<KulinerPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFE6F2DD);
+    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFD0EFB1);
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF88BDA4) : const Color(0xFF659287);
-    final Color secondaryColor = const Color(0xFF88BDA4); 
+    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final Color secondaryColor = const Color(0xFFB3D89C); 
 
     final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF659287).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))
+      BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.18), blurRadius: 15, offset: const Offset(0, 6))
     ];
 
     return Scaffold(
