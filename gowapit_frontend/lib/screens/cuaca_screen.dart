@@ -59,22 +59,22 @@ class _CuacaScreenState extends State<CuacaScreen> {
   // --- KAMUS CUACA (DENGAN ANIMASI LOTTIE JSON) ---
   Map<String, dynamic> _getWeatherInfo(int code) {
     if (code == 0) {
-      return {'desc': 'Cerah', 'lottie': 'assets/lottie/sunny.json', 'image': 'assets/images/3d_sun.png', 'color': Colors.orange};
+      return {'desc': 'Cerah', 'lottie': 'assets/lottie/detail cuaca/sun.json', 'image': 'assets/images/3d_sun.png', 'color': Colors.orange};
     }
     if (code == 1 || code == 2 || code == 3) {
       return {'desc': 'Berawan', 'lottie': 'assets/lottie/cloudy.json', 'image': 'assets/images/3d_cloud.png', 'color': Colors.grey};
     }
     if (code == 45 || code == 48) {
-      return {'desc': 'Berkabut', 'lottie': 'assets/lottie/Foggy.json', 'image': 'assets/images/3d_fog.png', 'color': Colors.blueGrey};
+      return {'desc': 'Berkabut', 'lottie': 'assets/lottie/detail cuaca/Fog.json', 'image': 'assets/images/3d_fog.png', 'color': Colors.blueGrey};
     }
     if (code == 51 || code == 53 || code == 55) {
-      return {'desc': 'Gerimis', 'lottie': 'assets/lottie/drizzle.json', 'image': 'assets/images/3d_drizzle.png', 'color': Colors.lightBlue};
+      return {'desc': 'Gerimis', 'lottie': 'assets/lottie/detail cuaca/drizzle.json', 'image': 'assets/images/3d_drizzle.png', 'color': Colors.lightBlue};
     }
     if (code == 61 || code == 63 || code == 65) {
-      return {'desc': 'Hujan', 'lottie': 'assets/lottie/rain.json', 'image': 'assets/images/3d_rain.png', 'color': Colors.blue};
+      return {'desc': 'Hujan', 'lottie': 'assets/lottie/detail cuaca/rain.json', 'image': 'assets/images/3d_rain.png', 'color': Colors.blue};
     }
     if (code == 80 || code == 81 || code == 82) {
-      return {'desc': 'Hujan Deras', 'lottie': 'assets/lottie/rain.json', 'image': 'assets/images/3d_heavy_rain.png', 'color': Colors.indigo};
+      return {'desc': 'Hujan Deras', 'lottie': 'assets/lottie/detail cuaca/rain.json', 'image': 'assets/images/3d_heavy_rain.png', 'color': Colors.indigo};
     }
     if (code == 95 || code == 96 || code == 99) {
       return {'desc': 'Badai Petir', 'lottie': 'assets/lottie/thunderstorm.json', 'image': 'assets/images/3d_thunderstorm.png', 'color': Colors.deepPurple};

@@ -37,6 +37,7 @@ flutter:
     - assets/data_pariwisata.json
     - assets/translations/
     - assets/lottie/
+    - assets/lottie/detail cuaca/
 
 flutter_launcher_icons:
   android: "launcher_icon"

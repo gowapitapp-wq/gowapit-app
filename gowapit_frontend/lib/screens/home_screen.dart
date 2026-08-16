@@ -166,11 +166,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   String _getWeatherLottie(int code) {
-    if (code == 0) return 'assets/lottie/sunny.json';
+    if (code == 0) return 'assets/lottie/detail cuaca/sun.json';
     if (code >= 1 && code <= 3) return 'assets/lottie/cloudy.json';
-    if (code == 45 || code == 48) return 'assets/lottie/Foggy.json';
-    if (code >= 51 && code <= 55) return 'assets/lottie/drizzle.json';
-    if (code >= 61 && code <= 82) return 'assets/lottie/rain.json';
+    if (code == 45 || code == 48) return 'assets/lottie/detail cuaca/Fog.json';
+    if (code >= 51 && code <= 55) return 'assets/lottie/detail cuaca/drizzle.json';
+    if (code >= 61 && code <= 82) return 'assets/lottie/detail cuaca/rain.json';
     if (code >= 95) return 'assets/lottie/thunderstorm.json';
     return 'assets/lottie/cloudy.json';
   }
