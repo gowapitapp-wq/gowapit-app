@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
 import 'dart:convert';
 
 class CuacaScreen extends StatefulWidget {
@@ -55,16 +56,30 @@ class _CuacaScreenState extends State<CuacaScreen> {
     }
   }
 
-  // --- KAMUS CUACA (KINI MENGGUNAKAN PATH GAMBAR 3D) ---
+  // --- KAMUS CUACA (DENGAN ANIMASI LOTTIE JSON) ---
   Map<String, dynamic> _getWeatherInfo(int code) {
-    if (code == 0) return {'desc': 'Cerah', 'image': 'assets/images/3d_sun.png', 'color': Colors.orange};
-    if (code == 1 || code == 2 || code == 3) return {'desc': 'Berawan', 'image': 'assets/images/3d_cloud.png', 'color': Colors.grey};
-    if (code == 45 || code == 48) return {'desc': 'Berkabut', 'image': 'assets/images/3d_fog.png', 'color': Colors.blueGrey};
-    if (code == 51 || code == 53 || code == 55) return {'desc': 'Gerimis', 'image': 'assets/images/3d_drizzle.png', 'color': Colors.lightBlue};
-    if (code == 61 || code == 63 || code == 65) return {'desc': 'Hujan', 'image': 'assets/images/3d_rain.png', 'color': Colors.blue};
-    if (code == 80 || code == 81 || code == 82) return {'desc': 'Hujan Deras', 'image': 'assets/images/3d_heavy_rain.png', 'color': Colors.indigo};
-    if (code == 95 || code == 96 || code == 99) return {'desc': 'Badai Petir', 'image': 'assets/images/3d_thunderstorm.png', 'color': Colors.deepPurple};
-    return {'desc': 'Cerah Berawan', 'image': 'assets/images/3d_cloud.png', 'color': Colors.blue}; 
+    if (code == 0) {
+      return {'desc': 'Cerah', 'lottie': 'assets/lottie/sunny.json', 'image': 'assets/images/3d_sun.png', 'color': Colors.orange};
+    }
+    if (code == 1 || code == 2 || code == 3) {
+      return {'desc': 'Berawan', 'lottie': 'assets/lottie/cloudy.json', 'image': 'assets/images/3d_cloud.png', 'color': Colors.grey};
+    }
+    if (code == 45 || code == 48) {
+      return {'desc': 'Berkabut', 'lottie': 'assets/lottie/Foggy.json', 'image': 'assets/images/3d_fog.png', 'color': Colors.blueGrey};
+    }
+    if (code == 51 || code == 53 || code == 55) {
+      return {'desc': 'Gerimis', 'lottie': 'assets/lottie/drizzle.json', 'image': 'assets/images/3d_drizzle.png', 'color': Colors.lightBlue};
+    }
+    if (code == 61 || code == 63 || code == 65) {
+      return {'desc': 'Hujan', 'lottie': 'assets/lottie/rain.json', 'image': 'assets/images/3d_rain.png', 'color': Colors.blue};
+    }
+    if (code == 80 || code == 81 || code == 82) {
+      return {'desc': 'Hujan Deras', 'lottie': 'assets/lottie/rain.json', 'image': 'assets/images/3d_heavy_rain.png', 'color': Colors.indigo};
+    }
+    if (code == 95 || code == 96 || code == 99) {
+      return {'desc': 'Badai Petir', 'lottie': 'assets/lottie/thunderstorm.json', 'image': 'assets/images/3d_thunderstorm.png', 'color': Colors.deepPurple};
+    }
+    return {'desc': 'Cerah Berawan', 'lottie': 'assets/lottie/cloudy.json', 'image': 'assets/images/3d_cloud.png', 'color': Colors.blue}; 
   }
 
   String _formatHari(String dateString) {
@@ -100,7 +115,7 @@ class _CuacaScreenState extends State<CuacaScreen> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: primaryColor),
-        title: Text("Cuaca Wapit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Montserrat')),
+        title: const Text("Cuaca Wapit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Montserrat')),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryColor))
@@ -109,11 +124,11 @@ class _CuacaScreenState extends State<CuacaScreen> {
               child: Column(
                 children: [
                   // ==========================================
-                  // 1. KARTU CUACA UTAMA 
+                  // 1. KARTU CUACA UTAMA (ANIMASI LOTTIE)
                   // ==========================================
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                     decoration: BoxDecoration(
                       color: cardColor,
                       borderRadius: BorderRadius.circular(30),
@@ -121,20 +136,28 @@ class _CuacaScreenState extends State<CuacaScreen> {
                     ),
                     child: Column(
                       children: [
-                        // --- GAMBAR 3D UTAMA ---
-                        Image.asset(
-                          _getWeatherInfo(_currentWeather['weather_code'])['image'],
-                          width: 150, 
-                          height: 150,
-                          fit: BoxFit.contain,
-                          // Fallback jika gambar 3D belum dimasukkan ke folder
-                          errorBuilder: (context, error, stackTrace) => Icon(
-                            Icons.cloud_queue, 
-                            size: 100, 
-                            color: _getWeatherInfo(_currentWeather['weather_code'])['color']
+                        // --- IKON ANIMASI LOTTIE UTAMA ---
+                        SizedBox(
+                          width: 170,
+                          height: 170,
+                          child: Lottie.asset(
+                            _getWeatherInfo(_currentWeather['weather_code'])['lottie'],
+                            fit: BoxFit.contain,
+                            repeat: true,
+                            errorBuilder: (context, error, stackTrace) => Image.asset(
+                              _getWeatherInfo(_currentWeather['weather_code'])['image'],
+                              width: 150,
+                              height: 150,
+                              fit: BoxFit.contain,
+                              errorBuilder: (c, e, s) => Icon(
+                                Icons.cloud_queue,
+                                size: 100,
+                                color: _getWeatherInfo(_currentWeather['weather_code'])['color'],
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -233,17 +256,25 @@ class _CuacaScreenState extends State<CuacaScreen> {
                                 Expanded(
                                   child: Row(
                                     children: [
-                                      // --- GAMBAR 3D KECIL DI LIST ---
-                                      Image.asset(
-                                        info['image'],
-                                        width: 32,
-                                        height: 32,
-                                        fit: BoxFit.contain,
-                                        // Fallback jika gambar 3D belum dimasukkan ke folder
-                                        errorBuilder: (context, error, stackTrace) => Icon(
-                                          Icons.cloud_queue, 
-                                          color: info['color'], 
-                                          size: 26
+                                      // --- IKON LOTTIE KECIL DI LIST ---
+                                      SizedBox(
+                                        width: 36,
+                                        height: 36,
+                                        child: Lottie.asset(
+                                          info['lottie'],
+                                          fit: BoxFit.contain,
+                                          repeat: true,
+                                          errorBuilder: (context, error, stackTrace) => Image.asset(
+                                            info['image'],
+                                            width: 32,
+                                            height: 32,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (c, e, s) => Icon(
+                                              Icons.cloud_queue,
+                                              color: info['color'],
+                                              size: 26,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),

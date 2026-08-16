@@ -44,20 +44,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     _fetchWeatherData();
-    _fetchUserData(); // Memanggil data user login
-    _fetchDestinasiData(); // Memanggil data destinasi populer dari backend
+    _fetchUserData();
+    _fetchDestinasiData();
     
-    // Setup Auto-Scroll Carousel (Geser tiap 3 detik)
-    _carouselTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      if (_currentPage < 2) { // Asumsi ada 3 banner promo
+    // Setup Auto-Scroll Carousel
+    _carouselTimer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      if (_currentPage < 2) {
         _currentPage++;
       } else {
         _currentPage = 0;
       }
       if (_pageController.hasClients) {
-        _pageController.animateToPage(_currentPage, duration: const Duration(milliseconds: 350), curve: Curves.easeIn);
+        _pageController.animateToPage(_currentPage, duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _carouselTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
   }
 
   // --- API DESTINASI POPULER LOGIC ---
@@ -68,7 +75,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         final data = jsonDecode(response.body);
         final List<dynamic> list = data['data'] ?? [];
         _allDestinasi = list;
-        // Urutkan berdasarkan rating tertinggi (descending)
         List<dynamic> sorted = List.from(list);
         sorted.sort((a, b) {
           num ratingA = (a['rating'] is num) ? a['rating'] : 0;
@@ -79,40 +85,43 @@ class _HomeDashboardState extends State<HomeDashboard> {
           _popularDestinasi = sorted.take(4).toList();
           _isLoadingDestinasi = false;
         });
+      } else {
+        if (mounted) setState(() => _isLoadingDestinasi = false);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingDestinasi = false);
     }
   }
 
-  @override
-  void dispose() {
-    _carouselTimer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
-
   // --- API USER LOGIC ---
   Future<void> _fetchUserData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
-      if (token == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
 
+    if (token == null) {
+      setState(() => _namaPengguna = "Petualang");
+      return;
+    }
+
+    try {
       final response = await http.get(
         ApiConfig.uri("/api/users/me"),
-        headers: {"Authorization": "Bearer $token"},
+        headers: {
+          "Authorization": "Bearer $token",
+        },
       );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
         setState(() {
           String namaLengkap = data['nama_lengkap'] ?? 'Petualang';
-          _namaPengguna = namaLengkap.split(' ')[0]; // Ambil nama panggilan
+          _namaPengguna = namaLengkap.split(' ')[0];
         });
+      } else {
+        setState(() => _namaPengguna = "Petualang");
       }
     } catch (e) {
-      // Biarkan default jika gagal
+      setState(() => _namaPengguna = "Petualang");
     }
   }
 
@@ -131,6 +140,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           _feelsLike = "${(current['apparent_temperature'] as num).round()}°C";
           _weatherDesc = _getWeatherDescription(code);
           _weatherIcon = _getWeatherIcon(code, isDay == 1);
+          _weatherLottie = _getWeatherLottie(code);
           _isLoadingWeather = false;
         });
       }
@@ -142,7 +152,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
   String _getWeatherDescription(int code) {
     if (code == 0) return "Cerah";
     if (code >= 1 && code <= 3) return "Cerah Berawan";
-    if (code >= 51 && code <= 67) return "Hujan";
+    if (code == 45 || code == 48) return "Berkabut";
+    if (code >= 51 && code <= 55) return "Gerimis";
+    if (code >= 61 && code <= 82) return "Hujan";
+    if (code >= 95) return "Badai Petir";
     return "Berawan";
   }
 
@@ -150,6 +163,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
     if (code == 0) return isDay ? Icons.wb_sunny : Icons.nightlight_round;
     if (code >= 51 && code <= 67) return Icons.water_drop_outlined;
     return Icons.cloud_outlined;
+  }
+
+  String _getWeatherLottie(int code) {
+    if (code == 0) return 'assets/lottie/sunny.json';
+    if (code >= 1 && code <= 3) return 'assets/lottie/cloudy.json';
+    if (code == 45 || code == 48) return 'assets/lottie/Foggy.json';
+    if (code >= 51 && code <= 55) return 'assets/lottie/drizzle.json';
+    if (code >= 61 && code <= 82) return 'assets/lottie/rain.json';
+    if (code >= 95) return 'assets/lottie/thunderstorm.json';
+    return 'assets/lottie/cloudy.json';
   }
 
   @override
@@ -321,9 +344,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: const Color(0xFFE6F2DD), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(_weatherIcon, size: 28, color: primaryColor),
+                    child: Lottie.asset(
+                      _weatherLottie,
+                      fit: BoxFit.contain,
+                      errorBuilder: (c, e, s) => Icon(_weatherIcon, size: 28, color: primaryColor),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
