@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
 import 'dart:convert';
 import 'dart:async'; // Diperlukan untuk Timer Carousel
 import '../config/api_config.dart';
@@ -25,6 +26,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   String _feelsLike = "--";
   String _weatherDesc = "Memuat...";
   IconData _weatherIcon = Icons.cloud_outlined;
+  String _weatherLottie = 'assets/lottie/cloudy.json';
   bool _isLoadingWeather = true;
 
   // Variabel User
