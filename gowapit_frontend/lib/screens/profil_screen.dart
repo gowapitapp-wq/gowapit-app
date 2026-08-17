@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import 'faq_screen.dart';
 import 'terms_privacy_screen.dart';
 import 'hubungi_kami_screen.dart';
+import 'admin_panel_screen.dart';
 import 'login_screen.dart';
 import '../theme_notifier.dart';
 
@@ -24,6 +25,9 @@ class _ProfilPageState extends State<ProfilPage> {
   String _email = "Memuat data...";
   String _fotoProfil = "";
   String _referralCode = "WAPIT-0000";
+  String _role = "user";
+  int? _referredBy;
+  int _totalReferred = 0;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -51,15 +55,30 @@ class _ProfilPageState extends State<ProfilPage> {
           _namaLengkap = data['nama_lengkap'] ?? 'Petualang Wapit';
           _email = data['email'] ?? 'email@tidak.ditemukan';
           _fotoProfil = data['foto_profil'] ?? '';
-
-          String namaDepan = _namaLengkap.split(' ')[0].toUpperCase();
-          namaDepan = namaDepan.replaceAll(RegExp(r'[^A-Z]'), '');
-          if (namaDepan.isEmpty) namaDepan = "WAPIT";
-          String angkaAcak = (1000 + Random().nextInt(9000)).toString();
-          _referralCode = "$namaDepan-$angkaAcak";
-
-          _isLoading = false;
+          _role = data['role'] ?? 'user';
+          _referralCode = data['referral_code'] ?? _referralCode;
+          _referredBy = data['referred_by'];
         });
+
+        // Ambil data statistik referral
+        try {
+          final refRes = await http.get(
+            ApiConfig.uri("/api/referral/my-code"),
+            headers: {"Authorization": "Bearer $token"},
+          );
+          if (refRes.statusCode == 200 && mounted) {
+            final refData = jsonDecode(refRes.body)["data"];
+            if (refData != null) {
+              setState(() {
+                _referralCode = refData["referral_code"] ?? _referralCode;
+                _totalReferred = refData["total_referred"] ?? 0;
+                _referredBy = refData["referred_by"] ?? _referredBy;
+              });
+            }
+          }
+        } catch (_) {}
+
+        if (mounted) setState(() => _isLoading = false);
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -303,6 +322,173 @@ class _ProfilPageState extends State<ProfilPage> {
     }
   }
 
+  void _showUseReferralModal() {
+    final TextEditingController refInputCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bool isDarkMode = Theme.of(ctx).brightness == Brightness.dark;
+        final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
+        final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
+        final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(Icons.card_giftcard, color: primaryColor, size: 24),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Gunakan Kode Referral",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Masukkan kode referral dari teman Anda untuk mendapatkan voucher diskon tiket wisata.",
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: refInputCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    decoration: InputDecoration(
+                      labelText: "Kode Referral Teman",
+                      hintText: "Contoh: BUDI-7A2F",
+                      labelStyle: TextStyle(color: primaryColor),
+                      prefixIcon: Icon(Icons.confirmation_number_outlined, color: primaryColor),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primaryColor, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final code = refInputCtrl.text.trim().toUpperCase();
+                              if (code.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Kode referral tidak boleh kosong")),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final prefs = await SharedPreferences.getInstance();
+                                final token = prefs.getString('jwt_token');
+                                final res = await http.post(
+                                  ApiConfig.uri("/api/referral/use"),
+                                  headers: {
+                                    "Authorization": "Bearer $token",
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: jsonEncode({"referral_code": code}),
+                                );
+
+                                final resData = jsonDecode(res.body);
+                                if (res.statusCode == 200 && mounted) {
+                                  Navigator.pop(ctx);
+                                  HapticFeedback.mediumImpact();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.celebration, color: Colors.white),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: Text(resData["message"] ??
+                                                  "Referral berhasil diterapkan! Voucher diskon aktif.")),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFF2E7D32),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  );
+                                  _fetchUserData();
+                                } else {
+                                  setModalState(() => isSubmitting = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(resData["detail"] ?? "Gagal menerapkan kode referral")),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Terjadi kesalahan: $e")),
+                                );
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              "Terapkan Referral",
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -383,6 +569,32 @@ class _ProfilPageState extends State<ProfilPage> {
                           ],
                         ),
                         Text(_email, style: TextStyle(fontSize: 13, color: subTextColor)),
+                        if (_role == 'admin') ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shield_rounded, size: 14, color: primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "ADMINISTRATOR",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -392,29 +604,104 @@ class _ProfilPageState extends State<ProfilPage> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
-                            const SizedBox(height: 4),
-                            Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
+                                const SizedBox(height: 4),
+                                Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                                if (_totalReferred > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      "Digunakan $_totalReferred teman",
+                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.copy_rounded, color: primaryColor),
+                              tooltip: "Salin Kode Referral",
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(text: _referralCode));
+                                HapticFeedback.lightImpact();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text("Kode Referral $_referralCode berhasil disalin!"),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFF2E7D32),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  );
+                                }
+                              },
+                            )
                           ],
                         ),
-                        IconButton(
-                          icon: Icon(Icons.copy, color: primaryColor),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Kode Referral $_referralCode berhasil disalin!")),
-                            );
-                          },
-                        )
+                        // Tombol Gunakan Kode Referral jika belum pernah pakai & bukan admin
+                        if (_referredBy == null && _role != 'admin') ...[
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: _showUseReferralModal,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.card_giftcard, size: 18, color: primaryColor),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Punya Kode Referral? Masukkan di sini",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // -- 2.5 MENU ADMIN (HANYA MUNCUL JIKA ROLE == ADMIN) --
+                  if (_role == 'admin') ...[
+                    _buildSectionHeader("ADMINISTRATOR", primaryColor),
+                    _buildMenuContainer(cardColor, ambientShadow, [
+                      _buildListItem(
+                        Icons.admin_panel_settings_outlined,
+                        "Panel Admin (Voucher & Referral)",
+                        textColor,
+                        iconBgColor,
+                        primaryColor,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 24),
+                  ],
 
                   // -- 3. PENGATURAN TEMA & BAHASA --
                   _buildSectionHeader("PENGATURAN", primaryColor),

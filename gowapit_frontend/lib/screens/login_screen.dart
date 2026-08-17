@@ -26,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _referralController = TextEditingController();
 
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
@@ -63,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -76,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     final Uri authUri = ApiConfig.uri(isLoginMode ? "/api/login" : "/api/register");
 
-    final Map<String, String> bodyData = isLoginMode
+    final Map<String, dynamic> bodyData = isLoginMode
         ? {
             "email": _emailController.text.trim(),
             "password": _passwordController.text,
@@ -85,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             "nama_lengkap": _nameController.text.trim(),
             "email": _emailController.text.trim(),
             "password": _passwordController.text,
+            if (_referralController.text.trim().isNotEmpty)
+              "referral_code": _referralController.text.trim().toUpperCase(),
           };
 
     try {
@@ -602,6 +606,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         return null;
                                       },
                                     ),
+
+                                    // Referral Code Field (Register Mode Only)
+                                    if (!isLoginMode) ...[
+                                      const SizedBox(height: 14),
+                                      _buildModernField(
+                                        controller: _referralController,
+                                        hint: "Kode Referral (opsional)",
+                                        icon: Icons.card_giftcard_rounded,
+                                        isDark: isDark,
+                                        validator: (_) => null,
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
