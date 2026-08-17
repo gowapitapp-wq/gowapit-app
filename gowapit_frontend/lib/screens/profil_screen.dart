@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import 'faq_screen.dart';
 import 'terms_privacy_screen.dart';
+import 'hubungi_kami_screen.dart';
 import 'login_screen.dart';
 import '../theme_notifier.dart';
 
@@ -442,6 +443,11 @@ class _ProfilPageState extends State<ProfilPage> {
                     _buildListItem(
                       Icons.security, "Terms & Privacy Policy", textColor, iconBgColor, primaryColor,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TermsPrivacyPage())),
+                    ),
+                    _buildDivider(dividerColor),
+                    _buildListItem(
+                      Icons.contact_mail_outlined, "Hubungi Kami", textColor, iconBgColor, primaryColor,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const HubungiKamiScreen())),
                     ),
                   ]),
                   const SizedBox(height: 32),
