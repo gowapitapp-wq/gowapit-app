@@ -396,5 +396,22 @@
                 ]
             }
         ]
-    }
+    },
+    "layanan_umum": [
+        {
+            "nama": "Pemadam Kebakaran",
+            "nomor": "(0293) 4901790",
+            "deskripsi": "Layanan darurat penanggulangan kebakaran dan penyelamatan (rescue) wilayah Ngadirejo. Lokasi Induk: Jl. Lingkar Utara Maron, Sidorejo, Temanggung. Jam Operasional: 24 Jam"
+        },
+        {
+            "nama": "Ambulance",
+            "nomor": "119",
+            "deskripsi": "Layanan transportasi medis darurat untuk penanganan cepat pasien kritis dan korban kecelakaan di wilayah Ngadirejo. Lokasi: PSC 119 Dinas Kesehatan Kab. Temanggung. Jam Operasional: 24 Jam"
+        },
+        {
+            "nama": "Polsek Ngadirejo",
+            "nomor": "(0293) 596220",
+            "deskripsi": "Unit pelaksana kepolisian di tingkat kecamatan yang menjaga keamanan, ketertiban masyarakat, dan perlindungan hukum di wilayah Kecamatan Ngadirejo. Lokasi: Jl. Raya Candiroto No.1, Dandu, Manggong, Kec. Ngadirejo, Kab. Temanggung. Jam Operasional: 24 Jam"
+        }
+    ]
 }
