@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
+import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:async'; // Diperlukan untuk Timer Carousel
 import '../config/api_config.dart';
@@ -31,6 +32,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // Variabel User
   String _namaPengguna = "Petualang";
+  String _email = "";
+  String _fotoProfil = "";
   
   // Variabel Destinasi Populer
   List<dynamic> _popularDestinasi = [];
@@ -118,6 +121,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         setState(() {
           String namaLengkap = data['nama_lengkap'] ?? 'Petualang';
           _namaPengguna = namaLengkap.split(' ')[0];
+          _email = data['email'] ?? '';
+          _fotoProfil = data['foto_profil'] ?? '';
         });
       } else {
         setState(() => _namaPengguna = "Petualang");
@@ -125,6 +130,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
     } catch (e) {
       setState(() => _namaPengguna = "Petualang");
     }
+  }
+
+  ImageProvider? _getAvatarImageProvider() {
+    if (_fotoProfil.isNotEmpty) {
+      if (_fotoProfil.startsWith("data:image")) {
+        try {
+          String base64Str = _fotoProfil.split(',').last;
+          return MemoryImage(base64Decode(base64Str));
+        } catch (_) {}
+      } else if (_fotoProfil.startsWith("http")) {
+        return NetworkImage(_fotoProfil);
+      }
+    }
+    if (_email.isNotEmpty) {
+      return NetworkImage(_dapatkanUrlGravatar(_email));
+    }
+    return const AssetImage('assets/images/default_avatar.png');
+  }
+
+  String _dapatkanUrlGravatar(String email) {
+    String cleanEmail = email.trim().toLowerCase();
+    String md5Hash = md5.convert(utf8.encode(cleanEmail)).toString();
+    return "https://www.gravatar.com/avatar/$md5Hash?d=identicon&s=200";
   }
 
   // --- API CUACA LOGIC ---
@@ -209,7 +237,20 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 children: [
                   Row(
                     children: [
-                      const CircleAvatar(radius: 20, backgroundImage: AssetImage('assets/images/default_avatar.png')),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: primaryColor.withValues(alpha: 0.35),
+                            width: 2,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: primaryColor.withValues(alpha: 0.2),
+                          backgroundImage: _getAvatarImageProvider(),
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
