@@ -175,7 +175,17 @@ class _BookingScreenState extends State<BookingScreen> {
     if (kode.isEmpty) return;
     setState(() { _checkingVoucher = true; _voucherError = null; _voucherDiskon = null; });
     try {
-      final res = await http.get(ApiConfig.uri('/api/voucher/$kode?subtotal=$_subtotal'));
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final Map<String, String> headers = {};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final res = await http.get(
+        ApiConfig.uri('/api/voucher/$kode?subtotal=$_subtotal'),
+        headers: headers,
+      );
       if (!mounted) return;
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body)['data'];
