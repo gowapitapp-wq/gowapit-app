@@ -9,6 +9,7 @@ import '../config/api_config.dart';
 import 'faq_screen.dart';
 import 'terms_privacy_screen.dart';
 import 'hubungi_kami_screen.dart';
+import 'voucher_saya_screen.dart';
 import 'admin_panel_screen.dart';
 import 'login_screen.dart';
 import '../theme_notifier.dart';
@@ -27,7 +28,7 @@ class _ProfilPageState extends State<ProfilPage> {
   String _referralCode = "WAPIT-0000";
   String _role = "user";
   int? _referredBy;
-  int _totalReferred = 0;
+  int _voucherCount = 0;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -55,30 +56,24 @@ class _ProfilPageState extends State<ProfilPage> {
           _namaLengkap = data['nama_lengkap'] ?? 'Petualang Wapit';
           _email = data['email'] ?? 'email@tidak.ditemukan';
           _fotoProfil = data['foto_profil'] ?? '';
+          _referralCode = data['referral_code'] ?? 'WAPIT-0000';
           _role = data['role'] ?? 'user';
-          _referralCode = data['referral_code'] ?? _referralCode;
           _referredBy = data['referred_by'];
+          _isLoading = false;
         });
 
-        // Ambil data statistik referral
+        // Fetch voucher count
         try {
-          final refRes = await http.get(
-            ApiConfig.uri("/api/referral/my-code"),
+          final vRes = await http.get(
+            ApiConfig.uri("/api/user/vouchers"),
             headers: {"Authorization": "Bearer $token"},
           );
-          if (refRes.statusCode == 200 && mounted) {
-            final refData = jsonDecode(refRes.body)["data"];
-            if (refData != null) {
-              setState(() {
-                _referralCode = refData["referral_code"] ?? _referralCode;
-                _totalReferred = refData["total_referred"] ?? 0;
-                _referredBy = refData["referred_by"] ?? _referredBy;
-              });
-            }
+          if (vRes.statusCode == 200 && mounted) {
+            final vData = jsonDecode(vRes.body)['data'] as List?;
+            final available = (vData ?? []).where((v) => v['status'] == 'tersedia').length;
+            setState(() => _voucherCount = available);
           }
         } catch (_) {}
-
-        if (mounted) setState(() => _isLoading = false);
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -322,173 +317,6 @@ class _ProfilPageState extends State<ProfilPage> {
     }
   }
 
-  void _showUseReferralModal() {
-    final TextEditingController refInputCtrl = TextEditingController();
-    bool isSubmitting = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final bool isDarkMode = Theme.of(ctx).brightness == Brightness.dark;
-        final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-        final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-        final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                top: 24,
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade400,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(Icons.card_giftcard, color: primaryColor, size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        "Gunakan Kode Referral",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Masukkan kode referral dari teman Anda untuk mendapatkan voucher diskon tiket wisata.",
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: refInputCtrl,
-                    textCapitalization: TextCapitalization.characters,
-                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                    decoration: InputDecoration(
-                      labelText: "Kode Referral Teman",
-                      hintText: "Contoh: BUDI-7A2F",
-                      labelStyle: TextStyle(color: primaryColor),
-                      prefixIcon: Icon(Icons.confirmation_number_outlined, color: primaryColor),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: primaryColor, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              final code = refInputCtrl.text.trim().toUpperCase();
-                              if (code.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Kode referral tidak boleh kosong")),
-                                );
-                                return;
-                              }
-
-                              setModalState(() => isSubmitting = true);
-                              try {
-                                final prefs = await SharedPreferences.getInstance();
-                                final token = prefs.getString('jwt_token');
-                                final res = await http.post(
-                                  ApiConfig.uri("/api/referral/use"),
-                                  headers: {
-                                    "Authorization": "Bearer $token",
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: jsonEncode({"referral_code": code}),
-                                );
-
-                                final resData = jsonDecode(res.body);
-                                if (res.statusCode == 200 && mounted) {
-                                  Navigator.pop(ctx);
-                                  HapticFeedback.mediumImpact();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Row(
-                                        children: [
-                                          const Icon(Icons.celebration, color: Colors.white),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                              child: Text(resData["message"] ??
-                                                  "Referral berhasil diterapkan! Voucher diskon aktif.")),
-                                        ],
-                                      ),
-                                      backgroundColor: const Color(0xFF2E7D32),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  );
-                                  _fetchUserData();
-                                } else {
-                                  setModalState(() => isSubmitting = false);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(resData["detail"] ?? "Gagal menerapkan kode referral")),
-                                  );
-                                }
-                              } catch (e) {
-                                setModalState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Terjadi kesalahan: $e")),
-                                );
-                              }
-                            },
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text(
-                              "Terapkan Referral",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -569,32 +397,6 @@ class _ProfilPageState extends State<ProfilPage> {
                           ],
                         ),
                         Text(_email, style: TextStyle(fontSize: 13, color: subTextColor)),
-                        if (_role == 'admin') ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.shield_rounded, size: 14, color: primaryColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "ADMINISTRATOR",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -605,77 +407,50 @@ class _ProfilPageState extends State<ProfilPage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
-                                  const SizedBox(height: 4),
-                                  Text(_referralCode, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
-                                  if (_totalReferred > 0)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        "Digunakan $_totalReferred teman",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
+                                const SizedBox(height: 4),
+                                Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                              ],
                             ),
-                            const SizedBox(width: 8),
                             IconButton(
-                              icon: Icon(Icons.copy_rounded, color: primaryColor),
-                              tooltip: "Salin Kode Referral",
-                              onPressed: () async {
-                                await Clipboard.setData(ClipboardData(text: _referralCode));
-                                HapticFeedback.lightImpact();
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Row(
-                                        children: [
-                                          const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                                          const SizedBox(width: 8),
-                                          Text("Kode Referral $_referralCode berhasil disalin!"),
-                                        ],
-                                      ),
-                                      backgroundColor: const Color(0xFF2E7D32),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  );
-                                }
+                              icon: Icon(Icons.copy, color: primaryColor),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: _referralCode));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Kode Referral $_referralCode berhasil disalin!")),
+                                );
                               },
                             )
                           ],
                         ),
-                        // Tombol Gunakan Kode Referral jika belum pernah pakai & bukan admin
-                        if (_referredBy == null && _role != 'admin') ...[
-                          const SizedBox(height: 12),
-                          const Divider(height: 1),
+                        if (_role != 'admin' && _referredBy == null) ...[
                           const SizedBox(height: 12),
                           InkWell(
-                            onTap: _showUseReferralModal,
+                            onTap: _showClaimReferralModal,
                             borderRadius: BorderRadius.circular(10),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                              ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.card_giftcard, size: 18, color: primaryColor),
+                                  Icon(Icons.card_giftcard_rounded, color: primaryColor, size: 16),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "Punya Kode Referral? Masukkan di sini",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryColor,
-                                    ),
+                                    "Punya Kode Teman? Klaim Voucher",
+                                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12),
                                   ),
                                 ],
                               ),
@@ -687,26 +462,56 @@ class _ProfilPageState extends State<ProfilPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // -- 2.5 MENU ADMIN (HANYA MUNCUL JIKA ROLE == ADMIN) --
+                  // -- 3. VOUCHER & REWARD --
+                  _buildSectionHeader("VOUCHER & REWARD", primaryColor),
+                  _buildMenuContainer(cardColor, ambientShadow, [
+                    _buildListItem(
+                      Icons.confirmation_num_outlined,
+                      "Voucher Saya",
+                      textColor,
+                      iconBgColor,
+                      primaryColor,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_voucherCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: primaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                "$_voucherCount Tersedia",
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
+                        ],
+                      ),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VoucherSayaScreen())).then((_) => _fetchUserData()),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // -- 4. ADMINISTRATOR (Jika Role Admin) --
                   if (_role == 'admin') ...[
-                    _buildSectionHeader("ADMINISTRATOR", primaryColor),
+                    _buildSectionHeader("ADMINISTRATOR", Colors.amber.shade800),
                     _buildMenuContainer(cardColor, ambientShadow, [
                       _buildListItem(
                         Icons.admin_panel_settings_outlined,
                         "Panel Admin (Voucher & Referral)",
                         textColor,
                         iconBgColor,
-                        primaryColor,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
-                        ),
+                        Colors.amber.shade800,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPanelScreen())).then((_) => _fetchUserData()),
                       ),
                     ]),
                     const SizedBox(height: 24),
                   ],
 
-                  // -- 3. PENGATURAN TEMA & BAHASA --
+                  // -- 5. PENGATURAN TEMA & BAHASA --
                   _buildSectionHeader("PENGATURAN", primaryColor),
                   _buildMenuContainer(cardColor, ambientShadow, [
                     _buildListItem(Icons.palette_outlined, "Theme", textColor, iconBgColor, primaryColor, trailing: ValueListenableBuilder<bool>(
@@ -722,7 +527,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   ]),
                   const SizedBox(height: 24),
 
-                  // -- 4. PUSAT BANTUAN & LEGAL --
+                  // -- 6. PUSAT BANTUAN & LEGAL --
                   _buildSectionHeader("INFORMASI & SYARAT", primaryColor),
                   _buildMenuContainer(cardColor, ambientShadow, [
                     _buildListItem(
@@ -789,6 +594,137 @@ class _ProfilPageState extends State<ProfilPage> {
 
   Widget _buildDivider(Color color) {
     return Divider(height: 1, thickness: 1, color: color, indent: 16, endIndent: 16);
+  }
+
+  void _showClaimReferralModal() {
+    final codeCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bool isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final Color cardBg = isDark ? const Color(0xFF1E2623) : Colors.white;
+        final Color textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+        final Color primaryColor = const Color(0xFF5E9190);
+
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+              ),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Klaim Kode Referral Teman",
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Masukkan kode referral teman Anda untuk mendapatkan voucher diskon tiket wisata Go Wapit!",
+                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF64748B), height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    decoration: InputDecoration(
+                      hintText: "Contoh: BUDI-1234",
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      prefixIcon: Icon(Icons.card_giftcard_rounded, color: primaryColor),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final kode = codeCtrl.text.trim().toUpperCase();
+                              if (kode.isEmpty) return;
+
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final prefs = await SharedPreferences.getInstance();
+                                final token = prefs.getString('jwt_token');
+
+                                final res = await http.post(
+                                  ApiConfig.uri("/api/referral/use"),
+                                  headers: {
+                                    "Authorization": "Bearer $token",
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: jsonEncode({"kode_referral": kode}),
+                                );
+
+                                final resData = jsonDecode(res.body);
+                                if (res.statusCode == 200) {
+                                  Navigator.pop(modalCtx);
+                                  _fetchUserData();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Selamat! Kode referral berhasil diklaim & voucher telah ditambahkan ke akun Anda.")),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                    SnackBar(content: Text(resData['detail'] ?? "Gagal mengklaim kode referral")),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                  SnackBar(content: Text("Terjadi kesalahan: $e")),
+                                );
+                              } finally {
+                                setModalState(() => isSubmitting = false);
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text("Klaim Reward Voucher", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showLogoutDialog(BuildContext context, bool isDarkMode) {

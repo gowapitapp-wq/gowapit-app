@@ -963,6 +963,11 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
         final String? fotoUlasan = u['foto'];
         final bool isMine = u['milik_saya'] == true;
         final String? dateStr = u['created_at'];
+        final int ulasanId = u['id'];
+        final String? balasanText = u['balasan'];
+        final String? balasanBy = u['balasan_by'];
+        final String? balasanAt = u['balasan_at'];
+
         String formattedDate = "";
         if (dateStr != null && dateStr.length >= 10) {
           formattedDate = dateStr.substring(0, 10);
@@ -1070,111 +1075,81 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                 ),
               ],
 
-              // --- BALASAN PENGELOLA (JIKA ADA) ---
-              if (u['balasan'] != null && (u['balasan'] as String).trim().isNotEmpty) ...[
-                Builder(
-                  builder: (context) {
-                    final String balasanText = u['balasan'];
-                    final String balasanBy = u['balasan_by'] ?? 'Admin Go Wapit';
-                    final String? balasanAtStr = u['balasan_at'];
-                    String formattedBalasanDate = "";
-                    if (balasanAtStr != null && balasanAtStr.length >= 10) {
-                      formattedBalasanDate = balasanAtStr.substring(0, 10);
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: isDarkMode ? 0.12 : 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border(
-                          left: BorderSide(color: primaryColor, width: 3.5),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // --- KOTAK BALASAN PENGELOLA ---
+              if (balasanText != null && balasanText.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: isDarkMode ? 0.15 : 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border(
+                      left: BorderSide(color: primaryColor, width: 3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.shield_rounded, size: 14, color: primaryColor),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    "Balasan dari $balasanBy",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryColor,
-                                      fontFamily: 'Montserrat',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (formattedBalasanDate.isNotEmpty)
-                                Text(
-                                  formattedBalasanDate,
-                                  style: TextStyle(fontSize: 10, color: subTextColor),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
+                          Icon(Icons.shield_rounded, size: 14, color: primaryColor),
+                          const SizedBox(width: 6),
                           Text(
-                            balasanText,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textColor.withValues(alpha: 0.9),
-                              height: 1.4,
-                              fontFamily: 'Inter',
-                            ),
+                            balasanBy ?? "Pengelola Go Wapit",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: primaryColor),
                           ),
+                          if (balasanAt != null && balasanAt.length >= 10) ...[
+                            const Spacer(),
+                            Text(
+                              balasanAt.substring(0, 10),
+                              style: TextStyle(fontSize: 10, color: subTextColor),
+                            ),
+                          ],
                         ],
                       ),
-                    );
-                  },
+                      const SizedBox(height: 6),
+                      Text(
+                        balasanText,
+                        style: TextStyle(fontSize: 12, color: textColor, height: 1.4, fontFamily: 'Inter'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
 
-              // --- AKSI ADMIN (BALAS / EDIT / HAPUS BALASAN) ---
+              // --- TOMBOL AKSI ADMIN ---
               if (_userRole == 'admin') ...[
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (u['balasan'] != null && (u['balasan'] as String).trim().isNotEmpty) ...[
-                      TextButton.icon(
-                        onPressed: () => _showReplyDialog(u['id'], u['balasan']),
-                        icon: const Icon(Icons.edit_outlined, size: 14),
-                        label: const Text("Edit Balasan", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
+                      onPressed: () => _showReplyModal(ulasanId, currentBalasan: balasanText),
+                      icon: Icon(Icons.reply_rounded, size: 14, color: primaryColor),
+                      label: Text(
+                        balasanText != null && balasanText.isNotEmpty ? "Edit Balasan" : "Balas Ulasan",
+                        style: TextStyle(fontSize: 11, color: primaryColor, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    if (balasanText != null && balasanText.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       TextButton.icon(
-                        onPressed: () => _deleteReply(u['id']),
-                        icon: const Icon(Icons.delete_outline, size: 14, color: Colors.red),
-                        label: const Text("Hapus", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                      ),
-                    ] else ...[
-                      TextButton.icon(
-                        onPressed: () => _showReplyDialog(u['id'], null),
-                        icon: Icon(Icons.reply_rounded, size: 14, color: primaryColor),
-                        label: Text("Balas Ulasan", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onPressed: () => _deleteReply(ulasanId),
+                        icon: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
+                        label: const Text(
+                          "Hapus Balasan",
+                          style: TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1188,31 +1163,34 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     );
   }
 
-  void _showReplyDialog(int ulasanId, String? existingReply) {
-    final TextEditingController replyCtrl = TextEditingController(text: existingReply ?? "");
-    bool isSaving = false;
+  void _showReplyModal(int ulasanId, {String? currentBalasan}) {
+    final destId = _destinasiId;
+    if (destId == null) return;
+
+    final balasanCtrl = TextEditingController(text: currentBalasan ?? "");
+    bool isSavingReply = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final cardColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
-        final textColor = isDark ? Colors.white : const Color(0xFF161D1B);
-        final primaryColor = isDark ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+        final bool isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final Color cardBg = isDark ? const Color(0xFF1E2623) : Colors.white;
+        final Color textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+        final Color primaryColor = const Color(0xFF5E9190);
 
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (modalCtx, setModalState) {
             return Container(
               padding: EdgeInsets.only(
                 top: 20,
-                left: 24,
-                right: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
               ),
               decoration: BoxDecoration(
-                color: cardColor,
+                color: cardBg,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
@@ -1230,58 +1208,43 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(Icons.shield_rounded, color: primaryColor, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        existingReply != null ? "Edit Balasan Admin" : "Balas Ulasan Wisatawan",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                    ],
+                  Text(
+                    currentBalasan != null ? "Edit Balasan Pengelola" : "Tulis Balasan Pengelola",
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   TextField(
-                    controller: replyCtrl,
+                    controller: balasanCtrl,
                     maxLines: 4,
                     style: TextStyle(color: textColor, fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: "Tulis tanggapan atau balasan resmi dari pengelola...",
+                      hintText: "Tulis tanggapan atau ucapan terima kasih untuk wisatawan...",
+                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: primaryColor, width: 2),
-                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    height: 46,
+                    height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: isSaving
+                      onPressed: isSavingReply
                           ? null
                           : () async {
-                              final text = replyCtrl.text.trim();
-                              if (text.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Teks balasan tidak boleh kosong")),
-                                );
-                                return;
-                              }
+                              final text = balasanCtrl.text.trim();
+                              if (text.isEmpty) return;
 
-                              setModalState(() => isSaving = true);
+                              setModalState(() => isSavingReply = true);
                               try {
-                                final destId = _destinasiId;
                                 final res = await http.post(
                                   ApiConfig.uri("/api/destinasi/$destId/ulasan/$ulasanId/balasan"),
                                   headers: {
@@ -1291,39 +1254,29 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                                   body: jsonEncode({"balasan": text}),
                                 );
 
-                                if (res.statusCode == 200 && mounted) {
-                                  Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Balasan berhasil disimpan!"),
-                                      backgroundColor: Color(0xFF2E7D32),
-                                    ),
-                                  );
+                                if (res.statusCode == 200) {
+                                  Navigator.pop(modalCtx);
                                   _fetchUlasan();
-                                } else {
-                                  setModalState(() => isSaving = false);
-                                  final err = jsonDecode(res.body);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(err["detail"] ?? "Gagal menyimpan balasan")),
+                                    const SnackBar(content: Text("Balasan pengelola berhasil dikirim!")),
+                                  );
+                                } else {
+                                  final errData = jsonDecode(res.body);
+                                  ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                    SnackBar(content: Text(errData['detail'] ?? "Gagal mengirim balasan")),
                                   );
                                 }
                               } catch (e) {
-                                setModalState(() => isSaving = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Terjadi kesalahan: $e")),
+                                ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                  SnackBar(content: Text("Error: $e")),
                                 );
+                              } finally {
+                                setModalState(() => isSavingReply = false);
                               }
                             },
-                      child: isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text(
-                              "Kirim Balasan",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
+                      child: isSavingReply
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text("Kirim Balasan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -1336,17 +1289,16 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
   }
 
   Future<void> _deleteReply(int ulasanId) async {
-    final confirm = await showDialog<bool>(
+    final destId = _destinasiId;
+    if (destId == null) return;
+
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Hapus Balasan", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text("Apakah Anda yakin ingin menghapus balasan ini?"),
+        title: const Text("Hapus Balasan"),
+        content: const Text("Apakah Anda yakin ingin menghapus balasan pengelola untuk ulasan ini?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -1359,7 +1311,6 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     if (confirm != true) return;
 
     try {
-      final destId = _destinasiId;
       final res = await http.delete(
         ApiConfig.uri("/api/destinasi/$destId/ulasan/$ulasanId/balasan"),
         headers: {"Authorization": "Bearer $_jwtToken"},
@@ -1367,10 +1318,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
 
       if (res.statusCode == 200 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Balasan berhasil dihapus!"),
-            backgroundColor: Color(0xFF2E7D32),
-          ),
+          const SnackBar(content: Text("Balasan pengelola berhasil dihapus!")),
         );
         _fetchUlasan();
       }
