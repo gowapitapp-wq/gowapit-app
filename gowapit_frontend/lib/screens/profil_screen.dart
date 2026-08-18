@@ -609,22 +609,25 @@ class _ProfilPageState extends State<ProfilPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
-                                const SizedBox(height: 4),
-                                Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
-                                if (_totalReferred > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      "Digunakan $_totalReferred teman",
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
+                                  const SizedBox(height: 4),
+                                  Text(_referralCode, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                                  if (_totalReferred > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        "Digunakan $_totalReferred teman",
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                      ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             IconButton(
                               icon: Icon(Icons.copy_rounded, color: primaryColor),
                               tooltip: "Salin Kode Referral",

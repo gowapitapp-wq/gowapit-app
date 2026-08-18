@@ -603,35 +603,38 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "DAFTAR VOUCHER AKTIF",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                      letterSpacing: 1.2,
-                      fontFamily: 'Montserrat',
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "DAFTAR VOUCHER AKTIF",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        letterSpacing: 1.2,
+                        fontFamily: 'Montserrat',
+                      ),
                     ),
-                  ),
-                  Text(
-                    "${_vouchers.length} Total Voucher",
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  ),
-                ],
+                    Text(
+                      "${_vouchers.length} Total Voucher",
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
                 onPressed: () => _showVoucherDialog(),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text("Buat Voucher", style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text("Buat Voucher", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),
@@ -678,7 +681,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -691,46 +694,46 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.confirmation_number, color: primaryColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        v["kode"] ?? "-",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                          letterSpacing: 1.1,
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                      Text(
-                        tipe == "persen" ? "Diskon $nilai%" : "Diskon Rp $nilai",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.confirmation_number, color: primaryColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      v["kode"] ?? "-",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                        letterSpacing: 1.1,
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    Text(
+                      tipe == "persen" ? "Diskon $nilai%" : "Diskon Rp $nilai",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isAktif ? const Color(0xFF2E7D32).withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -738,7 +741,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                 child: Text(
                   isAktif ? "AKTIF" : "NONAKTIF",
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: isAktif ? const Color(0xFF2E7D32) : Colors.grey,
                   ),
@@ -746,28 +749,38 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
           const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
 
           // Metadata Kuota & Aksi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.people_outline, size: 16, color: Colors.grey.shade500),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Terpakai: $terpakai / ${kuota == 0 ? '∞' : kuota}",
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.people_outline, size: 15, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        "Terpakai: $terpakai / ${kuota == 0 ? '∞' : kuota}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 4),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Toggle Switch
                   IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(6),
                     icon: Icon(
                       isAktif ? Icons.visibility : Icons.visibility_off,
                       color: isAktif ? primaryColor : Colors.grey,
@@ -776,14 +789,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     tooltip: isAktif ? "Nonaktifkan" : "Aktifkan",
                     onPressed: () => _toggleVoucherStatus(v),
                   ),
+                  const SizedBox(width: 4),
                   // Edit
                   IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(6),
                     icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 20),
                     tooltip: "Edit Voucher",
                     onPressed: () => _showVoucherDialog(voucher: v),
                   ),
+                  const SizedBox(width: 4),
                   // Delete
                   IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(6),
                     icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                     tooltip: "Hapus Voucher",
                     onPressed: () => _deleteVoucher(v["id"], v["kode"] ?? ""),
