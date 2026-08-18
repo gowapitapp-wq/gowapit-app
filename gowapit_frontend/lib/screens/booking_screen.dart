@@ -185,8 +185,9 @@ class _BookingScreenState extends State<BookingScreen> {
           _checkingVoucher = false;
         });
       } else {
+        final rawDetail = jsonDecode(res.body)['detail'];
         setState(() {
-          _voucherError = jsonDecode(res.body)['detail'] ?? 'Voucher tidak valid';
+          _voucherError = ApiConfig.extractErrorMessage(rawDetail, fallback: 'Voucher tidak valid');
           _checkingVoucher = false;
         });
       }
@@ -247,7 +248,8 @@ class _BookingScreenState extends State<BookingScreen> {
           );
         }
       } else {
-        final msg = jsonDecode(res.body)['detail'] ?? 'Gagal membuat booking';
+        final errBody = jsonDecode(res.body);
+        final msg = ApiConfig.extractErrorMessage(errBody['detail'], fallback: 'Gagal membuat booking');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
@@ -257,7 +259,7 @@ class _BookingScreenState extends State<BookingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Terjadi kesalahan: $e"), backgroundColor: Colors.red.shade700),
+          SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}"), backgroundColor: Colors.red.shade700),
         );
       }
     } finally {

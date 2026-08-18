@@ -112,15 +112,21 @@ class _ProfilPageState extends State<ProfilPage> {
         );
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Gagal memperbarui profil di server.")),
-          );
+          try {
+            final errBody = jsonDecode(response.body);
+            final msg = ApiConfig.extractErrorMessage(errBody['detail'], fallback: "Gagal memperbarui profil di server.");
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+          } catch (_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Gagal memperbarui profil di server.")),
+            );
+          }
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Terjadi kesalahan: $e")),
+          SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}")),
         );
       }
     } finally {
@@ -701,13 +707,14 @@ class _ProfilPageState extends State<ProfilPage> {
                                     const SnackBar(content: Text("Selamat! Kode referral berhasil diklaim & voucher telah ditambahkan ke akun Anda.")),
                                   );
                                 } else {
+                                  final errMsg = ApiConfig.extractErrorMessage(resData['detail'], fallback: "Gagal mengklaim kode referral.");
                                   ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                    SnackBar(content: Text(resData['detail'] ?? "Gagal mengklaim kode referral")),
+                                    SnackBar(content: Text(errMsg)),
                                   );
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                  SnackBar(content: Text("Terjadi kesalahan: $e")),
+                                  SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}")),
                                 );
                               } finally {
                                 setModalState(() => isSubmitting = false);

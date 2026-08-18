@@ -39,4 +39,33 @@ class ApiConfig {
   static String urlString(String path) {
     return uri(path).toString();
   }
+
+  /// Mengekstrak pesan error secara aman dari respon API backend (menangani String, Map, atau List FastAPI 422)
+  static String extractErrorMessage(dynamic detail, {String fallback = 'Terjadi kesalahan pada server.'}) {
+    if (detail == null) return fallback;
+    if (detail is String) return detail.isNotEmpty ? detail : fallback;
+    if (detail is List) {
+      if (detail.isEmpty) return fallback;
+      final List<String> msgs = [];
+      for (var item in detail) {
+        if (item is Map) {
+          if (item.containsKey('msg')) {
+            msgs.add(item['msg'].toString());
+          } else {
+            msgs.add(item.toString());
+          }
+        } else {
+          msgs.add(item.toString());
+        }
+      }
+      return msgs.isNotEmpty ? msgs.join(', ') : fallback;
+    }
+    if (detail is Map) {
+      if (detail.containsKey('msg')) return detail['msg'].toString();
+      if (detail.containsKey('detail')) return extractErrorMessage(detail['detail'], fallback: fallback);
+      if (detail.containsKey('message')) return detail['message'].toString();
+      return detail.toString();
+    }
+    return detail.toString();
+  }
 }

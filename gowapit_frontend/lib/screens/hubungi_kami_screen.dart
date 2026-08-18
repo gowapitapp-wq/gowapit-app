@@ -131,7 +131,7 @@ class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
       } else {
         if (mounted) {
           final resData = jsonDecode(response.body);
-          String err = resData['detail'] ?? "Gagal mengirim pesan. Silakan coba lagi.";
+          String err = ApiConfig.extractErrorMessage(resData['detail'], fallback: "Gagal mengirim pesan. Silakan coba lagi.");
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(err), backgroundColor: Colors.redAccent),
           );
@@ -140,7 +140,7 @@ class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Terjadi kesalahan: $e"), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}"), backgroundColor: Colors.redAccent),
         );
       }
     } finally {

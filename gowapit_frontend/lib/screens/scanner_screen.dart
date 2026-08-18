@@ -153,14 +153,14 @@ class _ScannerScreenState extends State<ScannerScreen>
         _showResultDialog(isRedeemed: body['is_redeemed'] ?? false);
       } else {
         setState(() {
-          _errorMessage = body['detail'] ?? 'Kode tiket tidak valid atau tidak terdaftar';
+          _errorMessage = ApiConfig.extractErrorMessage(body['detail'], fallback: 'Kode tiket tidak valid atau tidak terdaftar');
           _isLoading = false;
         });
         _showErrorDialog(_errorMessage!);
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Gagal terhubung ke server backend: $e';
+        _errorMessage = 'Gagal terhubung ke server backend: ${ApiConfig.extractErrorMessage(e)}';
         _isLoading = false;
       });
       _showErrorDialog("Koneksi gagal. Pastikan server backend aktif.");
@@ -214,11 +214,12 @@ class _ScannerScreenState extends State<ScannerScreen>
         if (mounted) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        _showErrorDialog(body['detail'] ?? 'Gagal menukarkan tiket');
+        final errText = ApiConfig.extractErrorMessage(body['detail'], fallback: 'Gagal menukarkan tiket');
+        _showErrorDialog(errText);
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      _showErrorDialog('Koneksi gagal saat menukarkan tiket: $e');
+      _showErrorDialog('Koneksi gagal saat menukarkan tiket: ${ApiConfig.extractErrorMessage(e)}');
     }
   }
 

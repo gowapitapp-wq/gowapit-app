@@ -145,7 +145,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           });
         }
       } else {
-        String detailMessage = responseData["detail"] ?? responseData["message"] ?? "Gagal memproses (Kode: ${response.statusCode})";
+        String detailMessage = ApiConfig.extractErrorMessage(
+          responseData["detail"] ?? responseData["message"],
+          fallback: "Gagal memproses (Kode: ${response.statusCode})",
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(detailMessage),

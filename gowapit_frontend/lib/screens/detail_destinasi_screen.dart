@@ -340,9 +340,10 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
           await _fetchUlasan();
         } else {
           final res = jsonDecode(response.body);
+          final msg = ApiConfig.extractErrorMessage(res['detail'], fallback: "Gagal menyimpan ulasan");
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(res['detail'] ?? "Gagal menyimpan ulasan"),
+              content: Text(msg),
               backgroundColor: Colors.red,
             ),
           );
@@ -351,7 +352,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Terjadi kesalahan jaringan."), backgroundColor: Colors.red),
+          SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}"), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1262,13 +1263,14 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                                   );
                                 } else {
                                   final errData = jsonDecode(res.body);
+                                  final msg = ApiConfig.extractErrorMessage(errData['detail'], fallback: "Gagal mengirim balasan");
                                   ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                    SnackBar(content: Text(errData['detail'] ?? "Gagal mengirim balasan")),
+                                    SnackBar(content: Text(msg)),
                                   );
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                  SnackBar(content: Text("Error: $e")),
+                                  SnackBar(content: Text("Error: ${ApiConfig.extractErrorMessage(e)}")),
                                 );
                               } finally {
                                 setModalState(() => isSavingReply = false);

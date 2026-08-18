@@ -131,15 +131,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         );
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Gagal menyimpan konfigurasi referral.")),
-          );
+          try {
+            final err = jsonDecode(res.body);
+            final msg = ApiConfig.extractErrorMessage(err['detail'], fallback: "Gagal menyimpan konfigurasi referral.");
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+          } catch (_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Gagal menyimpan konfigurasi referral.")),
+            );
+          }
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Terjadi kesalahan: $e")),
+          SnackBar(content: Text("Terjadi kesalahan: ${ApiConfig.extractErrorMessage(e)}")),
         );
       }
     } finally {
@@ -416,13 +422,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                                     );
                                   } else {
                                     final errData = jsonDecode(res.body);
+                                    final msg = ApiConfig.extractErrorMessage(errData['detail'], fallback: "Gagal menyimpan voucher");
                                     ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                      SnackBar(content: Text(errData['detail'] ?? "Gagal menyimpan voucher")),
+                                      SnackBar(content: Text(msg)),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                    SnackBar(content: Text("Error: $e")),
+                                    SnackBar(content: Text("Error: ${ApiConfig.extractErrorMessage(e)}")),
                                   );
                                 } finally {
                                   setModalState(() => isSavingModal = false);
