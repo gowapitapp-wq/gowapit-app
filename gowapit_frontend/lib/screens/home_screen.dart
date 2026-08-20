@@ -13,6 +13,7 @@ import 'kuliner_screen.dart';
 import 'booking_screen.dart';
 import 'layanan_umum_screen.dart';
 import 'search_screen.dart';
+import 'galeri_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -369,6 +370,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
                   _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()))),
                   _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
+                  _buildMenuIcon(Icons.photo_library_rounded, "Galeri", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GaleriScreen()))),
                 ],
               ),
               const SizedBox(height: 32),
@@ -550,14 +552,15 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
-            child: Icon(icon, color: primaryColor, size: 26),
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), boxShadow: shadow),
+            child: Icon(icon, color: primaryColor, size: 24),
           ),
-          const SizedBox(height: 8),
-          Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
+          const SizedBox(height: 7),
+          Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: textColor)),
         ],
       ),
     );
