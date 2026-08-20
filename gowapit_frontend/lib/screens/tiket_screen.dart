@@ -228,10 +228,11 @@ class _TiketPageState extends State<TiketPage> {
         }
       }
 
-      // 2. Jika ada item kuliner dan bayar via Midtrans online, buat transaksi Midtrans checkout umum
+      // 2. Jika ada item kuliner, simpan ke backend /api/kuliner/orders dan/atau buat transaksi Midtrans
       int totalKulinerQty = 0;
       int totalKulinerHarga = 0;
       List<String> namaKulinerList = [];
+      List<Map<String, dynamic>> kulinerPayloadItems = [];
 
       for (var item in currentCart) {
         if (item['kategori'] == 'KULINER') {
@@ -240,35 +241,68 @@ class _TiketPageState extends State<TiketPage> {
           totalKulinerQty += qty;
           totalKulinerHarga += (hargaItem * qty);
           namaKulinerList.add(item['nama']);
+          kulinerPayloadItems.add({
+            'nama': item['nama'],
+            'qty': qty,
+            'harga': hargaItem,
+            'kedai': item['kedai'] ?? item['deskripsi'] ?? 'Kedai Go Wapit',
+          });
         }
       }
 
-      if (totalKulinerQty > 0 && !isSimulasi) {
+      String kulinerTicketCode = "WPTK-${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}${DateTime.now().day.toString().padLeft(2, '0')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
+      String kulinerOrderId = generatedOrderId;
+
+      if (totalKulinerQty > 0) {
         try {
-          final orderData = {
-            "order_id": "WPT-KULINER-${DateTime.now().millisecondsSinceEpoch}", 
-            "gross_amount": totalKulinerHarga, 
-            "customer_details": {
-              "first_name": "Petualang Wapit", 
-              "email": "petualang@gmail.com"
-            }
-          };
-          final response = await http.post(
-            ApiConfig.uri('/api/checkout'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(orderData),
+          final kRes = await http.post(
+            ApiConfig.uri('/api/kuliner/orders'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'items': kulinerPayloadItems,
+              'total_harga': totalKulinerHarga,
+              'order_id': generatedOrderId,
+            }),
           );
-          if (response.statusCode == 200) {
-            final responseData = jsonDecode(response.body);
-            final String? redirectUrl = responseData['redirect_url'];
-            if (redirectUrl != null && redirectUrl.isNotEmpty) {
-              final Uri paymentUri = Uri.parse(redirectUrl);
-              if (await canLaunchUrl(paymentUri)) {
-                await launchUrl(paymentUri, mode: LaunchMode.externalApplication); 
-              }
+          if (kRes.statusCode == 200) {
+            final kData = jsonDecode(kRes.body)['data'];
+            if (kData != null) {
+              kulinerTicketCode = kData['ticket_code'] ?? kulinerTicketCode;
+              kulinerOrderId = kData['order_id'] ?? kulinerOrderId;
             }
           }
         } catch (_) {}
+
+        if (!isSimulasi) {
+          try {
+            final orderData = {
+              "order_id": kulinerOrderId, 
+              "gross_amount": totalKulinerHarga, 
+              "customer_details": {
+                "first_name": "Petualang Wapit", 
+                "email": "petualang@gmail.com"
+              }
+            };
+            final response = await http.post(
+              ApiConfig.uri('/api/checkout'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(orderData),
+            );
+            if (response.statusCode == 200) {
+              final responseData = jsonDecode(response.body);
+              final String? redirectUrl = responseData['redirect_url'];
+              if (redirectUrl != null && redirectUrl.isNotEmpty) {
+                final Uri paymentUri = Uri.parse(redirectUrl);
+                if (await canLaunchUrl(paymentUri)) {
+                  await launchUrl(paymentUri, mode: LaunchMode.externalApplication); 
+                }
+              }
+            }
+          } catch (_) {}
+        }
       }
 
       // 3. Masukkan item-item ke Riwayat E-Tiket
@@ -286,6 +320,7 @@ class _TiketPageState extends State<TiketPage> {
             'nama': item['nama'],
             'tanggal_pakai': tglPakai,
             'order_id': item['order_id'] ?? generatedOrderId,
+            'ticket_code': item['ticket_code'] ?? item['order_id'] ?? generatedOrderId,
             'qty': orang,
             'total_harga': formatRupiah(itemTotal),
             'status': 'Aktif', 
@@ -305,10 +340,12 @@ class _TiketPageState extends State<TiketPage> {
           'kategori': 'KULINER',
           'nama': namaMenuGabungan,
           'tanggal_pakai': 'Berlaku Hari Ini',
-          'order_id': generatedOrderId,
+          'order_id': kulinerOrderId,
+          'ticket_code': kulinerTicketCode,
           'qty': totalKulinerQty,
           'total_harga': formatRupiah(totalKulinerHarga),
           'status': 'Aktif',
+          'items': kulinerPayloadItems,
         });
       }
 

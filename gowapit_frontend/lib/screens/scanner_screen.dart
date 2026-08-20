@@ -228,6 +228,24 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (_scanResult == null) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1C2824) : Colors.white;
+    const primaryColor = Color(0xFF5E9190);
+    final isKuliner = (_scanResult!['kategori'] == 'KULINER');
+
+    String dialogTitle;
+    IconData dialogIcon;
+    Color dialogColor;
+
+    if (isRedeemed) {
+      dialogTitle = isKuliner ? "Tiket Kuliner Sudah Terpakai" : "Tiket Sudah Terpakai";
+      dialogIcon = Icons.warning_amber_rounded;
+      dialogColor = Colors.redAccent;
+    } else {
+      dialogTitle = isKuliner ? "Tiket Kuliner Valid" : "Tiket Valid & Aktif";
+      dialogIcon = isKuliner ? Icons.restaurant_rounded : Icons.check_circle_rounded;
+      dialogColor = const Color(0xFF4CAF50);
+    }
+
+    final itemsList = _scanResult!['items'] as List?;
 
     showDialog(
       context: context,
@@ -237,52 +255,104 @@ class _ScannerScreenState extends State<ScannerScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(
-              isRedeemed ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
-              color: isRedeemed ? Colors.redAccent : const Color(0xFF4CAF50),
-              size: 28,
-            ),
+            Icon(dialogIcon, color: dialogColor, size: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                isRedeemed ? "Tiket Sudah Terpakai" : "Tiket Valid & Aktif",
+                dialogTitle,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: isRedeemed ? Colors.redAccent : const Color(0xFF4CAF50),
+                  color: dialogColor,
                 ),
               ),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow("Nama Pemesan", _scanResult!['nama_pemesan'] ?? '-'),
-            const SizedBox(height: 8),
-            _buildInfoRow("Paket Wisata", _scanResult!['nama_paket'] ?? '-'),
-            const SizedBox(height: 8),
-            _buildInfoRow("Jumlah Orang", "${_scanResult!['jumlah_orang']} Orang"),
-            const SizedBox(height: 8),
-            _buildInfoRow("Tanggal Kunjungan", _scanResult!['tanggal_pakai'] ?? '-'),
-            const SizedBox(height: 8),
-            _buildInfoRow("Kode Tiket", _scanResult!['ticket_code'] ?? '-'),
-            if (isRedeemed && _scanResult!['redeemed_at'] != null) ...[
-              const Divider(height: 24),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow("Kategori", isKuliner ? "Kuliner & Jajanan" : "Paket Wisata"),
+              const SizedBox(height: 8),
+              _buildInfoRow(isKuliner ? "Nama Pelanggan" : "Nama Pemesan", _scanResult!['nama_pemesan'] ?? '-'),
+              const SizedBox(height: 8),
+              if (!isKuliner) ...[
+                _buildInfoRow("Paket Wisata", _scanResult!['nama_paket'] ?? '-'),
+                const SizedBox(height: 8),
+                _buildInfoRow("Jumlah Orang", "${_scanResult!['jumlah_orang']} Orang"),
+                const SizedBox(height: 8),
+                _buildInfoRow("Tanggal Kunjungan", _scanResult!['tanggal_pakai'] ?? '-'),
+              ] else ...[
+                _buildInfoRow("Total Menu", "${_scanResult!['jumlah_orang']} Porsi / Item"),
+                if (_scanResult!['total_harga'] != null) ...[
+                  const SizedBox(height: 8),
+                  _buildInfoRow(
+                    "Total Pembayaran",
+                    "Rp ${_scanResult!['total_harga'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                  ),
+                ],
+                if (itemsList != null && itemsList.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF14201C) : const Color(0xFFF7FAF8),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Rincian Pesanan Menu:",
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
+                        ),
+                        const SizedBox(height: 6),
+                        ...itemsList.map((it) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "• ${it['nama']}",
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  Text(
+                                    "${it['qty']}x",
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 8),
+              _buildInfoRow("Kode Tiket", _scanResult!['ticket_code'] ?? '-'),
+              if (isRedeemed && _scanResult!['redeemed_at'] != null) ...[
+                const Divider(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    isKuliner
+                        ? "⚠️ Tiket kuliner ini sudah diserahkan/digunakan pada ${_scanResult!['redeemed_at']} oleh ${_scanResult!['redeemed_by'] ?? 'Petugas'}."
+                        : "⚠️ Tiket ini sudah digunakan pada ${_scanResult!['redeemed_at']} oleh ${_scanResult!['redeemed_by'] ?? 'Petugas'}.",
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
                 ),
-                child: Text(
-                  "⚠️ Tiket ini sudah digunakan pada ${_scanResult!['redeemed_at']} oleh ${_scanResult!['redeemed_by'] ?? 'Petugas'}.",
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -304,7 +374,7 @@ class _ScannerScreenState extends State<ScannerScreen>
               ),
               onPressed: () => _redeemTicket(_scanResult!['ticket_code']),
               icon: const Icon(Icons.verified, size: 18),
-              label: const Text("Konfirmasi Masuk (Tukar)"),
+              label: Text(isKuliner ? "Konfirmasi Serah Menu" : "Konfirmasi Masuk (Tukar)"),
             ),
         ],
       ),
@@ -312,19 +382,26 @@ class _ScannerScreenState extends State<ScannerScreen>
   }
 
   void _showSuccessRedeemDialog(String msg) {
+    final isKuliner = (_scanResult?['kategori'] == 'KULINER');
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
-            SizedBox(width: 10),
-            Text("Berhasil Divalidasi!", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
+            const SizedBox(width: 10),
+            Text(
+              isKuliner ? "Menu Diserahkan!" : "Berhasil Divalidasi!",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
           ],
         ),
         content: Text(
-          "$msg\n\nPengunjung: ${_scanResult?['nama_pemesan'] ?? '-'}\nJumlah: ${_scanResult?['jumlah_orang'] ?? '-'} Orang",
+          isKuliner
+              ? "$msg\n\nPelanggan: ${_scanResult?['nama_pemesan'] ?? '-'}\nTotal Menu: ${_scanResult?['jumlah_orang'] ?? '-'} Porsi / Item"
+              : "$msg\n\nPengunjung: ${_scanResult?['nama_pemesan'] ?? '-'}\nJumlah: ${_scanResult?['jumlah_orang'] ?? '-'} Orang",
           style: const TextStyle(fontSize: 14),
         ),
         actions: [
@@ -801,7 +878,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                   TextField(
                     controller: _codeController,
                     decoration: InputDecoration(
-                      hintText: "Contoh: WPT-20260815-XXXXX",
+                      hintText: "Contoh: WPT-... (paket) atau WPTK-... (kuliner)",
                       prefixIcon: const Icon(Icons.confirmation_number_outlined, size: 20),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.clear, size: 18),
