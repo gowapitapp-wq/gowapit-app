@@ -5,6 +5,40 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'detail_destinasi_screen.dart';
 
+// ============================================================================
+// MODEL STORY HIGHLIGHT (INSTAGRAM STORIES STYLE)
+// ============================================================================
+class StorySlide {
+  final String image;
+  final String caption;
+  final String location;
+  final String time;
+
+  const StorySlide({
+    required this.image,
+    required this.caption,
+    required this.location,
+    required this.time,
+  });
+}
+
+class HighlightGroup {
+  final String id;
+  final String title;
+  final String coverImage;
+  final List<StorySlide> slides;
+
+  const HighlightGroup({
+    required this.id,
+    required this.title,
+    required this.coverImage,
+    required this.slides,
+  });
+}
+
+// ============================================================================
+// HALAMAN UTAMA GALERI
+// ============================================================================
 class GaleriScreen extends StatefulWidget {
   const GaleriScreen({super.key});
 
@@ -18,9 +52,139 @@ class _GaleriScreenState extends State<GaleriScreen> {
 
   late PageController _pageController;
   double _currentPageValue = 0.0;
-  String _selectedCategory = "Semua";
+  String _selectedFeedCategory = "Semua";
 
-  // Data Fallback jika koneksi offline / lambat
+  // --- DATA SOROTAN (INSTAGRAM STORIES) LENGKAP ---
+  final List<HighlightGroup> _highlightGroups = const [
+    HighlightGroup(
+      id: "pinus",
+      title: "Hutan Pinus",
+      coverImage: "assets/images/HutanPinus.jpeg",
+      slides: [
+        StorySlide(
+          image: "assets/images/HutanPinus.jpeg",
+          caption: "Pagi syahdu berkabut di antara kanopi pohon pinus yang menjulang tinggi 🌲🌫️",
+          location: "Kawasan Utama Hutan Pinus Wapit",
+          time: "2 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/BeritaDiskon.png",
+          caption: "Spot foto estetik favorit pengunjung di bawah rindangnya pepohonan ✨📸",
+          location: "Spot Foto Instagramable Wapit",
+          time: "3 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/peta_wapit.png",
+          caption: "Peta jalur trekking dan camping ground terpadu Wapit 🗺️🏕️",
+          location: "Peta Kawasan Wapit",
+          time: "5 jam lalu",
+        ),
+      ],
+    ),
+    HighlightGroup(
+      id: "sendang",
+      title: "Sendang Suci",
+      coverImage: "assets/images/MataAirSuci.jpeg",
+      slides: [
+        StorySlide(
+          image: "assets/images/MataAirSuci.jpeg",
+          caption: "Sumber air sakral penyuplai air berkah perayaan Tri Suci Waisak di Candi Borobudur 💧🪷",
+          location: "Sendang Umbul Jumprit",
+          time: "4 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/MakamKiJumprit.jpeg",
+          caption: "Situs religi bersejarah peninggalan era Kerajaan Majapahit 🏛️",
+          location: "Kompleks Makam Ki Jumprit",
+          time: "6 jam lalu",
+        ),
+      ],
+    ),
+    HighlightGroup(
+      id: "wahana",
+      title: "Wahana Seru",
+      coverImage: "assets/images/HighRope.jpg",
+      slides: [
+        StorySlide(
+          image: "assets/images/HighRope.jpg",
+          caption: "Tantangan High Rope di antara puncak kanopi pohon pinus! Uji adrenalinmu 🧗‍♂️⚡",
+          location: "Zona Outbound & Petualangan",
+          time: "1 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/FlyingFox.jpeg",
+          caption: "Sensasi meluncur bebas di udara melintasi lembah hijau sepanjang 100+ meter 🦅💨",
+          location: "Flying Fox Dewasa Wapit",
+          time: "3 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/FlyingFoxAnak.jpeg",
+          caption: "Wahana seru dan aman untuk si kecil didampingi instruktur bersertifikasi 👶🛡️",
+          location: "Flying Fox Junior",
+          time: "4 jam lalu",
+        ),
+      ],
+    ),
+    HighlightGroup(
+      id: "satwa",
+      title: "Satwa Wapit",
+      coverImage: "assets/images/InteraksiDenganMonyet.jpg",
+      slides: [
+        StorySlide(
+          image: "assets/images/InteraksiDenganMonyet.jpg",
+          caption: "Bercengkerama dan memberi makan kawanan monyet ekor panjang yang ramah 🐒🍌",
+          location: "Taman Satwa Hutan Jumprit",
+          time: "Baru saja",
+        ),
+        StorySlide(
+          image: "assets/images/HutanPinus.jpeg",
+          caption: "Habitat asri flora & fauna terlindungi di lereng Gunung Sindoro 🌿🐿️",
+          location: "Lereng Gunung Sindoro",
+          time: "2 jam lalu",
+        ),
+      ],
+    ),
+    HighlightGroup(
+      id: "kopi",
+      title: "Kopi & Senja",
+      coverImage: "assets/images/BeritaFestivalKopi.png",
+      slides: [
+        StorySlide(
+          image: "assets/images/BeritaFestivalKopi.png",
+          caption: "Aroma seduhan kopi Arabika Java Sindoro bersama barista dan petani lokal ☕🍃",
+          location: "Amfiteater Hutan Pinus Wapit",
+          time: "5 jam lalu",
+        ),
+        StorySlide(
+          image: "assets/images/ArabikaNaturalExpresso.jpeg",
+          caption: "Secangkir espresso hangat di tengah sejuknya udara pegunungan 18°C ☕✨",
+          location: "Kedai Kopi Pinus Wapit",
+          time: "7 jam lalu",
+        ),
+      ],
+    ),
+    HighlightGroup(
+      id: "budaya",
+      title: "Seni Budaya",
+      coverImage: "assets/images/Tari.jpeg",
+      slides: [
+        StorySlide(
+          image: "assets/images/Tari.jpeg",
+          caption: "Pesona keluwesan penari Tari Wedok Tegowanuh khas lereng Temanggung 💃🎭",
+          location: "Panggung Seni & Budaya",
+          time: "Kemarin",
+        ),
+        StorySlide(
+          image: "assets/images/BeritaFestivalKopi.png",
+          caption: "Semarak gelaran festival rakyat dan pementasan seni tradisi lereng Sindoro 🎪🎉",
+          location: "Panggung Amfiteater Wapit",
+          time: "Kemarin",
+        ),
+      ],
+    ),
+  ];
+
+  // Data Fallback Destinasi
   final List<Map<String, dynamic>> _fallbackDestinasi = [
     {
       "id": 1,
@@ -148,7 +312,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
       }
     } catch (_) {}
 
-    // Gunakan fallback data jika backend offline / tidak merespons
     if (mounted) {
       setState(() {
         _listDestinasi = _fallbackDestinasi;
@@ -157,7 +320,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
     }
   }
 
-  // Ambil item untuk Coverflow (Top 4 rated atau destinasi utama)
   List<dynamic> _getFeaturedItems() {
     if (_listDestinasi.isEmpty) return _fallbackDestinasi.take(4).toList();
     final items = List<dynamic>.from(_listDestinasi);
@@ -169,25 +331,12 @@ class _GaleriScreenState extends State<GaleriScreen> {
     return items.take(5).toList();
   }
 
-  // Ambil daftar kategori unik untuk Sorotan (Highlights)
-  List<Map<String, dynamic>> _getHighlights() {
-    return [
-      {"label": "Semua", "kategori": "Semua", "image": "assets/images/HutanPinus.jpeg"},
-      {"label": "Alam", "kategori": "Alam", "image": "assets/images/HutanPinus.jpeg"},
-      {"label": "Budaya", "kategori": "Budaya", "image": "assets/images/MataAirSuci.jpeg"},
-      {"label": "Wahana", "kategori": "Wahana", "image": "assets/images/HighRope.jpg"},
-      {"label": "Fauna", "kategori": "Fauna", "image": "assets/images/InteraksiDenganMonyet.jpg"},
-      {"label": "Event", "kategori": "Event", "image": "assets/images/BeritaFestivalKopi.png"},
-    ];
-  }
-
-  // Filter destinasi untuk Feed Grid
   List<dynamic> _getFilteredFeed() {
     if (_listDestinasi.isEmpty) return _fallbackDestinasi;
-    if (_selectedCategory == "Semua") return _listDestinasi;
+    if (_selectedFeedCategory == "Semua") return _listDestinasi;
     return _listDestinasi.where((item) {
       final String kat = (item['kategori'] ?? '').toString().toLowerCase();
-      return kat.contains(_selectedCategory.toLowerCase());
+      return kat.contains(_selectedFeedCategory.toLowerCase());
     }).toList();
   }
 
@@ -198,6 +347,24 @@ class _GaleriScreenState extends State<GaleriScreen> {
       str = 'assets/$str';
     }
     return str;
+  }
+
+  // --- BUKA INSTAGRAM STORY VIEWER ---
+  void _openStoryViewer(int initialIndex) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, anim, _) => StoryViewerScreen(
+          highlightGroups: _highlightGroups,
+          initialGroupIndex: initialIndex,
+        ),
+        transitionsBuilder: (context, anim, _, child) {
+          return FadeTransition(opacity: anim, child: child);
+        },
+      ),
+    );
   }
 
   // --- DETAIL POP-UP DIALOG (BLUR BACKGROUND) ---
@@ -254,7 +421,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- FOTO 3:4 HEADER WITH CLOSE BUTTON ---
                         Stack(
                           children: [
                             AspectRatio(
@@ -268,7 +434,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ),
                               ),
                             ),
-                            // Gradient shadow top
                             Positioned(
                               top: 0, left: 0, right: 0,
                               height: 60,
@@ -285,7 +450,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ),
                               ),
                             ),
-                            // Close Button [X]
                             Positioned(
                               top: 12,
                               right: 12,
@@ -302,7 +466,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ),
                               ),
                             ),
-                            // Category Tag on image
                             Positioned(
                               bottom: 12,
                               left: 12,
@@ -328,8 +491,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                             ),
                           ],
                         ),
-
-                        // --- CONTENT SECTION ---
                         Padding(
                           padding: const EdgeInsets.all(18),
                           child: Column(
@@ -345,8 +506,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-
-                              // Rating and Photo Count
                               Row(
                                 children: [
                                   Container(
@@ -374,8 +533,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-
-                              // Description
                               Text(
                                 desc,
                                 style: TextStyle(
@@ -386,8 +543,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ),
                               ),
                               const SizedBox(height: 14),
-
-                              // Location Row
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -406,8 +561,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                 ],
                               ),
                               const SizedBox(height: 18),
-
-                              // Action Button: Lihat Detail Destinasi
                               SizedBox(
                                 width: double.infinity,
                                 height: 44,
@@ -471,11 +624,12 @@ class _GaleriScreenState extends State<GaleriScreen> {
     final Color subTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF404846);
 
     final featuredItems = _getFeaturedItems();
-    final highlights = _getHighlights();
     final filteredFeed = _getFilteredFeed();
 
+    final List<String> categories = ["Semua", "Alam", "Budaya", "Wahana", "Fauna", "Event"];
+
     return Scaffold(
-      backgroundColor: Colors.transparent, // Tetap transparan agar gradient shell global tampil
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -540,7 +694,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 3D Coverflow PageView
                     SizedBox(
                       height: 290,
                       child: PageView.builder(
@@ -554,7 +707,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                           final num ratingNum = (item['rating'] is num) ? item['rating'] : 4.8;
                           final String ratingStr = ratingNum > 0 ? ratingNum.toStringAsFixed(1) : "4.8";
 
-                          // Hitung transformasi 3D
                           final double diff = index - _currentPageValue;
                           final double rotateY = (-diff * 0.22).clamp(-0.4, 0.4);
                           final double scale = (1 - (diff.abs() * 0.16)).clamp(0.82, 1.0);
@@ -564,7 +716,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                           return Transform(
                             alignment: Alignment.center,
                             transform: Matrix4.identity()
-                              ..setEntry(3, 2, 0.0018) // Efek perspektif 3D
+                              ..setEntry(3, 2, 0.0018)
                               ..translate(translationX)
                               ..scale(scale)
                               ..rotateY(rotateY),
@@ -589,7 +741,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        // Foto 3:4
                                         Image.asset(
                                           imagePath,
                                           fit: BoxFit.cover,
@@ -598,7 +749,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                             child: const Icon(Icons.image, color: Colors.white54, size: 36),
                                           ),
                                         ),
-                                        // Gradient Overlay
                                         Container(
                                           decoration: BoxDecoration(
                                             gradient: LinearGradient(
@@ -613,7 +763,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                             ),
                                           ),
                                         ),
-                                        // Caption / Label
                                         Positioned(
                                           bottom: 14,
                                           left: 14,
@@ -713,73 +862,96 @@ class _GaleriScreenState extends State<GaleriScreen> {
                     const SizedBox(height: 24),
 
                     // =========================================================
-                    // SECTION 2: SOROTAN (HIGHLIGHTS) - INSTAGRAM STORY STYLE
+                    // SECTION 2: SOROTAN (HIGHLIGHTS) - INSTAGRAM STORIES
                     // =========================================================
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                        "Sorotan Kategori",
-                        style: TextStyle(
-                          fontFamily: 'Montserrat',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                "Sorotan Momen",
+                                style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFE1306C), Color(0xFFFD1D1D), Color(0xFFF56040)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.play_arrow_rounded, color: Colors.white, size: 12),
+                                    SizedBox(width: 2),
+                                    Text(
+                                      "Stories",
+                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            "Ketuk untuk putar",
+                            style: TextStyle(fontSize: 11, color: subTextColor, fontStyle: FontStyle.italic),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
 
                     SizedBox(
-                      height: 98,
+                      height: 102,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: highlights.length,
-                        separatorBuilder: (context, index) => const SizedBox(width: 14),
+                        itemCount: _highlightGroups.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 16),
                         itemBuilder: (context, index) {
-                          final h = highlights[index];
-                          final bool isSelected = (_selectedCategory == h['kategori']);
-                          final String imagePath = _cleanImagePath(h['image']);
+                          final h = _highlightGroups[index];
+                          final String imagePath = _cleanImagePath(h.coverImage);
 
                           return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedCategory = h['kategori'];
-                              });
-                            },
+                            onTap: () => _openStoryViewer(index),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
+                                // Circular Story Border Ring
+                                Container(
+                                  width: 66,
+                                  height: 66,
                                   padding: const EdgeInsets.all(2.5),
-                                  width: 64,
-                                  height: 64,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: isSelected
-                                        ? const LinearGradient(
-                                            colors: [primaryColor, celadonColor],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          )
-                                        : null,
-                                    border: isSelected
-                                        ? null
-                                        : Border.all(
-                                            color: isDark ? Colors.white24 : Colors.grey.shade300,
-                                            width: 1.5,
-                                          ),
-                                    boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: primaryColor.withValues(alpha: 0.35),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ]
-                                        : [],
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF5E9190),
+                                        Color(0xFFB3D89C),
+                                        Color(0xFFFDBB2D),
+                                        Color(0xFF22C1C3),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryColor.withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
                                   child: Container(
                                     padding: const EdgeInsets.all(2),
@@ -788,28 +960,40 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                       color: isDark ? const Color(0xFF16221D) : Colors.white,
                                     ),
                                     child: ClipOval(
-                                      child: Image.asset(
-                                        imagePath,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (c, e, s) => Container(
-                                          color: primaryColor.withValues(alpha: 0.2),
-                                          child: const Icon(Icons.landscape, color: primaryColor, size: 24),
-                                        ),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.asset(
+                                            imagePath,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (c, e, s) => Container(
+                                              color: primaryColor.withValues(alpha: 0.2),
+                                              child: const Icon(Icons.landscape, color: primaryColor, size: 24),
+                                            ),
+                                          ),
+                                          Container(
+                                            color: Colors.black.withValues(alpha: 0.1),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  h['label'],
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                    color: isSelected ? primaryColor : subTextColor,
-                                    fontFamily: 'Inter',
+                                SizedBox(
+                                  width: 72,
+                                  child: Text(
+                                    h.title,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                      fontFamily: 'Inter',
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -818,7 +1002,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
 
                     // =========================================================
                     // SECTION 3: FEED GALERI UTAMA (GRID 2-KOLOM 3:4)
@@ -831,7 +1015,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                           Row(
                             children: [
                               Text(
-                                "Koleksi Momen",
+                                "Koleksi Foto",
                                 style: TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontSize: 16,
@@ -853,18 +1037,55 @@ class _GaleriScreenState extends State<GaleriScreen> {
                               ),
                             ],
                           ),
-                          if (_selectedCategory != "Semua")
-                            GestureDetector(
-                              onTap: () => setState(() => _selectedCategory = "Semua"),
-                              child: Text(
-                                "Reset Filter",
-                                style: TextStyle(fontSize: 12, color: primaryColor, fontWeight: FontWeight.w600),
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
+
+                    // Kategori Pills untuk Feed Grid
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: categories.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final cat = categories[index];
+                          final bool isSelected = (_selectedFeedCategory == cat);
+
+                          return GestureDetector(
+                            onTap: () => setState(() => _selectedFeedCategory = cat),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? primaryColor
+                                    : (isDark ? const Color(0xFF1C2824) : Colors.white),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? primaryColor
+                                      : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                ),
+                              ),
+                              child: Text(
+                                cat,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? Colors.white : subTextColor,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
 
                     if (filteredFeed.isEmpty)
                       Container(
@@ -880,7 +1101,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                             Icon(Icons.photo_library_outlined, size: 48, color: subTextColor.withValues(alpha: 0.5)),
                             const SizedBox(height: 12),
                             Text(
-                              "Tidak ada foto pada kategori '$_selectedCategory'",
+                              "Tidak ada foto pada kategori '$_selectedFeedCategory'",
                               style: TextStyle(fontSize: 13, color: subTextColor),
                               textAlign: TextAlign.center,
                             ),
@@ -925,7 +1146,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                   child: Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      // Image 3:4
                                       Image.asset(
                                         imagePath,
                                         fit: BoxFit.cover,
@@ -934,8 +1154,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                           child: const Icon(Icons.image, color: Colors.white54),
                                         ),
                                       ),
-
-                                      // Gradient Bottom
                                       Container(
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
@@ -950,8 +1168,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                           ),
                                         ),
                                       ),
-
-                                      // Top Right Pin Icon
                                       Positioned(
                                         top: 8,
                                         right: 8,
@@ -964,8 +1180,6 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                           child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 16),
                                         ),
                                       ),
-
-                                      // Bottom Caption
                                       Positioned(
                                         bottom: 10,
                                         left: 10,
@@ -1015,6 +1229,436 @@ class _GaleriScreenState extends State<GaleriScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FULLSCREEN INSTAGRAM STORY VIEWER WIDGET
+// ============================================================================
+class StoryViewerScreen extends StatefulWidget {
+  final List<HighlightGroup> highlightGroups;
+  final int initialGroupIndex;
+
+  const StoryViewerScreen({
+    super.key,
+    required this.highlightGroups,
+    required this.initialGroupIndex,
+  });
+
+  @override
+  State<StoryViewerScreen> createState() => _StoryViewerScreenState();
+}
+
+class _StoryViewerScreenState extends State<StoryViewerScreen> with SingleTickerProviderStateMixin {
+  late int _currentGroupIndex;
+  late int _currentSlideIndex;
+  late AnimationController _animController;
+  bool _isPaused = false;
+  bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentGroupIndex = widget.initialGroupIndex;
+    _currentSlideIndex = 0;
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4500),
+    );
+
+    _animController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _onSlideTimerCompleted();
+      }
+    });
+
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _onSlideTimerCompleted() {
+    final currentGroup = widget.highlightGroups[_currentGroupIndex];
+    if (_currentSlideIndex < currentGroup.slides.length - 1) {
+      setState(() {
+        _currentSlideIndex++;
+        _isLiked = false;
+      });
+      _animController.reset();
+      _animController.forward();
+    } else {
+      // Pindah ke group highlight berikutnya jika ada
+      if (_currentGroupIndex < widget.highlightGroups.length - 1) {
+        setState(() {
+          _currentGroupIndex++;
+          _currentSlideIndex = 0;
+          _isLiked = false;
+        });
+        _animController.reset();
+        _animController.forward();
+      } else {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  void _previousSlide() {
+    if (_currentSlideIndex > 0) {
+      setState(() {
+        _currentSlideIndex--;
+        _isLiked = false;
+      });
+      _animController.reset();
+      _animController.forward();
+    } else if (_currentGroupIndex > 0) {
+      setState(() {
+        _currentGroupIndex--;
+        _currentSlideIndex = widget.highlightGroups[_currentGroupIndex].slides.length - 1;
+        _isLiked = false;
+      });
+      _animController.reset();
+      _animController.forward();
+    }
+  }
+
+  void _nextSlide() {
+    final currentGroup = widget.highlightGroups[_currentGroupIndex];
+    if (_currentSlideIndex < currentGroup.slides.length - 1) {
+      setState(() {
+        _currentSlideIndex++;
+        _isLiked = false;
+      });
+      _animController.reset();
+      _animController.forward();
+    } else if (_currentGroupIndex < widget.highlightGroups.length - 1) {
+      setState(() {
+        _currentGroupIndex++;
+        _currentSlideIndex = 0;
+        _isLiked = false;
+      });
+      _animController.reset();
+      _animController.forward();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  void _pauseTimer() {
+    setState(() => _isPaused = true);
+    _animController.stop();
+  }
+
+  void _resumeTimer() {
+    setState(() => _isPaused = false);
+    _animController.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentGroup = widget.highlightGroups[_currentGroupIndex];
+    final currentSlide = currentGroup.slides[_currentSlideIndex];
+    final int totalSlides = currentGroup.slides.length;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: GestureDetector(
+          onTapDown: (_) => _pauseTimer(),
+          onTapCancel: () => _resumeTimer(),
+          onTapUp: (details) {
+            _resumeTimer();
+            final double screenWidth = MediaQuery.of(context).size.width;
+            if (details.globalPosition.dx < screenWidth * 0.35) {
+              _previousSlide();
+            } else {
+              _nextSlide();
+            }
+          },
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! > 250) {
+              Navigator.pop(context);
+            }
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // --- 1. FULLSCREEN IMAGE STORY ---
+              Image.asset(
+                currentSlide.image,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(
+                  color: Colors.grey.shade900,
+                  child: const Center(
+                    child: Icon(Icons.broken_image_rounded, color: Colors.white38, size: 64),
+                  ),
+                ),
+              ),
+
+              // --- 2. GRADIENT OVERLAYS (TOP & BOTTOM) ---
+              Positioned(
+                top: 0, left: 0, right: 0,
+                height: 180,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.75),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                height: 240,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.85),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // --- 3. TOP PROGRESS BARS & HEADER (HIDES WHEN PAUSED/HOLD) ---
+              AnimatedOpacity(
+                opacity: _isPaused ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 150),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 12,
+                    right: 12,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Segmented Progress Bar
+                      Row(
+                        children: List.generate(totalSlides, (i) {
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: SizedBox(
+                                  height: 2.8,
+                                  child: AnimatedBuilder(
+                                    animation: _animController,
+                                    builder: (context, _) {
+                                      double val = 0.0;
+                                      if (i < _currentSlideIndex) {
+                                        val = 1.0;
+                                      } else if (i == _currentSlideIndex) {
+                                        val = _animController.value;
+                                      }
+                                      return LinearProgressIndicator(
+                                        value: val,
+                                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Header Row (Avatar, Title, Time, Close [X])
+                      Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF5E9190), Color(0xFFB3D89C)],
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(currentGroup.coverImage, fit: BoxFit.cover),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      currentGroup.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Montserrat',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text("•", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      currentSlide.time,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  "${_currentSlideIndex + 1} dari $totalSlides cerita",
+                                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // --- 4. BOTTOM CAPTION & INTERACTION BAR ---
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+                left: 16,
+                right: 16,
+                child: AnimatedOpacity(
+                  opacity: _isPaused ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Location Pill Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFB3D89C).withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on_rounded, color: Color(0xFFB3D89C), size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              currentSlide.location,
+                              style: const TextStyle(
+                                color: Color(0xFFB3D89C),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Caption Text Box
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Text(
+                          currentSlide.caption,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            height: 1.4,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Interaction Row (Kirim Respon & Like)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white70, size: 18),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "Kirim tanggapan cerita...",
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _isLiked = !_isLiked);
+                            },
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _isLiked ? Colors.red.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _isLiked ? Colors.red : Colors.white24,
+                                ),
+                              ),
+                              child: Icon(
+                                _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                color: _isLiked ? Colors.red : Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
