@@ -424,7 +424,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => DetailDestinasiPage(
-                                          destinasi: item,
+                                          data: Map<String, dynamic>.from(item),
                                           allDestinasi: _listDestinasi,
                                         ),
                                       ),
