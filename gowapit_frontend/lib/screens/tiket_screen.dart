@@ -812,132 +812,143 @@ class BerhasilTicketCard extends StatelessWidget {
   const BerhasilTicketCard({super.key, required this.data, required this.isDarkMode});
 
   // --- FUNGSI MEMUNCULKAN POP-UP E-TIKET ---
+  // --- FUNGSI MEMUNCULKAN POP-UP E-TIKET ---
   void _tampilkanETiket(BuildContext context, Color primaryColor, Color textColor, Color subTextColor) {
+    final String ticketCode = data['ticket_code'] ?? data['order_id'] ?? 'WPT-TICKET';
+    final String? orderId = data['order_id'];
+
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
+          clipBehavior: Clip.antiAlias,
           child: Container(
-            padding: const EdgeInsets.all(24),
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisSize: MainAxisSize.min, 
-              children: [
-                // Header
-                Text(
-                  "E-Tiket Go Wapit", 
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')
-                ),
-                const SizedBox(height: 20),
-                
-                // --- KODE QR DINAMIS DENGAN QR_FLUTTER ---
-                Container(
-                  width: 210,
-                  height: 210,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFB3D89C), width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, 
+                children: [
+                  // Header
+                  Text(
+                    "E-Tiket Go Wapit", 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat'),
                   ),
-                  child: Center(
-                    child: QrImageView(
-                      data: data['ticket_code'] ?? data['order_id'] ?? 'WPT-TICKET',
-                      version: QrVersions.auto,
-                      size: 186,
-                      backgroundColor: Colors.white,
-                      errorCorrectionLevel: QrErrorCorrectLevel.M,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                
-                // Kode Tiket
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFF2F6F4),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    data['ticket_code'] ?? data['order_id'] ?? '-',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: primaryColor,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                
-                Divider(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200, thickness: 1),
-                const SizedBox(height: 14),
-                
-                // Rincian Pesanan
-                _buildDetailRow("Kategori", data['kategori'] ?? '-', subTextColor, textColor),
-                const SizedBox(height: 12),
-                _buildDetailRow("Item", data['nama'] ?? '-', subTextColor, textColor),
-                const SizedBox(height: 12),
-                _buildDetailRow("Jumlah", "${data['qty']} ${data['kategori'] == 'PAKET' ? 'Orang' : 'Item'}", subTextColor, textColor),
-                const SizedBox(height: 12),
-                _buildDetailRow("Tanggal", data['tanggal_pakai'] ?? '-', subTextColor, textColor),
-                
-                const SizedBox(height: 24),
-                
-                // --- PERINGATAN PEMAKAIAN 1 KALI ---
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3))
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline, color: Colors.orange, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Perhatian: E-Tiket ini hanya berlaku untuk 1 (satu) kali penggunaan atau penukaran di lokasi.", 
-                          style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.orange.shade300 : Colors.orange.shade800, fontFamily: 'Inter', height: 1.4)
+                  const SizedBox(height: 14),
+                  
+                  // --- KODE QR DINAMIS DENGAN QR_FLUTTER ---
+                  Container(
+                    width: 176,
+                    height: 176,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFB3D89C), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
-                      )
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Tombol Tutup
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14)
+                      ],
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Tutup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: Center(
+                      child: QrImageView(
+                        data: ticketCode,
+                        version: QrVersions.auto,
+                        size: 156,
+                        backgroundColor: Colors.white,
+                        errorCorrectionLevel: QrErrorCorrectLevel.M,
+                      ),
+                    ),
                   ),
-                )
-              ],
+                  const SizedBox(height: 12),
+                  
+                  // Badge Kode Tiket
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFF2F6F4),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      ticketCode,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.6,
+                        color: primaryColor,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  Divider(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200, thickness: 1),
+                  const SizedBox(height: 10),
+                  
+                  // Rincian Pesanan
+                  _buildDetailRow("Kategori", data['kategori'] ?? '-', subTextColor, textColor),
+                  const SizedBox(height: 8),
+                  _buildDetailRow("Item", data['nama'] ?? '-', subTextColor, textColor),
+                  const SizedBox(height: 8),
+                  _buildDetailRow("Jumlah", "${data['qty']} ${data['kategori'] == 'PAKET' ? 'Orang' : 'Item'}", subTextColor, textColor),
+                  const SizedBox(height: 8),
+                  _buildDetailRow("Tanggal", data['tanggal_pakai'] ?? '-', subTextColor, textColor),
+                  if (orderId != null && orderId != ticketCode) ...[
+                    const SizedBox(height: 8),
+                    _buildDetailRow("Order ID", orderId, subTextColor, textColor),
+                  ],
+                  
+                  const SizedBox(height: 14),
+                  
+                  // --- PERINGATAN PEMAKAIAN 1 KALI ---
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Perhatian: E-Tiket ini hanya berlaku untuk 1 (satu) kali penggunaan/penukaran di lokasi.", 
+                            style: TextStyle(fontSize: 11, color: isDarkMode ? Colors.orange.shade300 : Colors.orange.shade800, fontFamily: 'Inter', height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  
+                  // Tombol Tutup
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Tutup", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
-      }
+      },
     );
   }
 
@@ -1063,14 +1074,21 @@ class BerhasilTicketCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Order ID", style: TextStyle(fontSize: 11, color: subTextColor, fontFamily: 'Inter')),
-                    const SizedBox(height: 2),
-                    Text(data['order_id'] ?? '-', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Inter')),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Kode Tiket", style: TextStyle(fontSize: 11, color: subTextColor, fontFamily: 'Inter')),
+                      const SizedBox(height: 2),
+                      Text(
+                        data['ticket_code'] ?? data['order_id'] ?? '-',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Inter'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 if (isAktif) 
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
