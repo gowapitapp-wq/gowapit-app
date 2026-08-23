@@ -241,11 +241,11 @@ class _GaleriScreenState extends State<GaleriScreen> {
   // --- DETAIL POP-UP DIALOG (BLUR BACKGROUND) ---
   void _showDetailPopup(Map<String, dynamic> item) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    const Color primaryColor = Color(0xFF5E9190);
-    const Color celadonColor = Color(0xFFB3D89C);
+    final Color primaryColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    const Color emeraldColor = Color(0xFF2E7D6A);
     final Color cardBg = isDark ? const Color(0xFF1C2824) : Colors.white;
-    final Color textColor = isDark ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF404846);
+    final Color textColor = isDark ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
 
     final String name = item['name'] ?? 'Kesenian Temanggung';
     final String infoTag = item['info'] ?? item['kategori'] ?? 'Budaya';
@@ -384,7 +384,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: celadonColor.withValues(alpha: 0.2),
+                                      color: emeraldColor.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -392,7 +392,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 11.5,
-                                        color: isDark ? celadonColor : primaryColor,
+                                        color: isDark ? emeraldColor : primaryColor,
                                       ),
                                     ),
                                   ),
@@ -417,7 +417,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.location_on_rounded, size: 16, color: celadonColor),
+                                  const Icon(Icons.location_on_rounded, size: 16, color: emeraldColor),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -612,12 +612,12 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                         decoration: BoxDecoration(
                                           color: Colors.black.withValues(alpha: 0.5),
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: celadonColor.withValues(alpha: 0.5)),
+                                          border: Border.all(color: emeraldColor.withValues(alpha: 0.5)),
                                         ),
                                         child: Text(
                                           infoTag,
-                                          style: const TextStyle(
-                                            color: celadonColor,
+                                          style: TextStyle(
+                                            color: emeraldColor,
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -753,7 +753,7 @@ class _GaleriScreenState extends State<GaleriScreen> {
                                     fit: BoxFit.cover,
                                     errorBuilder: (c, e, s) => Container(
                                       color: primaryColor.withValues(alpha: 0.2),
-                                      child: const Icon(Icons.landscape, color: primaryColor, size: 24),
+                                      child: Icon(Icons.landscape, color: primaryColor, size: 24),
                                     ),
                                   ),
                                   Container(
