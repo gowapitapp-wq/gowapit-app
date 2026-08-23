@@ -497,10 +497,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
 Widget _buildPromoCard(String tag, String title, String description, Color color, bool isDarkMode, List<BoxShadow> ambientShadow, String imagePath) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: ambientShadow,
+        border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
         // --- MEMASANG GAMBAR SEBAGAI BACKGROUND ---
         image: DecorationImage(
           image: AssetImage(imagePath),
@@ -512,7 +513,7 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
       child: Container(
         // --- GRADIENT OVERLAY AGAR TEKS TETAP TERBACA JELAS ---
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
