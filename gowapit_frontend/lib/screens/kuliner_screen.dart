@@ -120,16 +120,18 @@ class _KulinerPageState extends State<KulinerPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFD0EFB1);
+    final Color bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color secondaryColor = const Color(0xFFB3D89C); 
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color secondaryColor = const Color(0xFF2E7D6A); 
 
     final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.18), blurRadius: 15, offset: const Offset(0, 6))
+      BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
     ];
+
+    final filteredList = _filteredMenu;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -153,26 +155,34 @@ class _KulinerPageState extends State<KulinerPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: _kategoriList.length,
                   itemBuilder: (context, index) {
-                    bool isSelected = _selectedCategoryIndex == index;
+                    final kat = _kategoriList[index];
+                    final isSelected = _selectedCategoryIndex == index;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedCategoryIndex = index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                      onTap: () {
+                        setState(() {
+                          _selectedCategoryIndex = index;
+                        });
+                      },
+                      child: Container(
                         margin: const EdgeInsets.only(right: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         decoration: BoxDecoration(
-                          color: isSelected ? secondaryColor : Colors.transparent,
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(color: isSelected ? secondaryColor : secondaryColor.withValues(alpha: 0.5), width: 1.5),
+                          color: isSelected ? primaryColor : cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: isSelected ? [BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] : ambientShadow,
+                          border: Border.all(
+                            color: isSelected ? primaryColor : (isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
+                            width: 1,
+                          ),
                         ),
                         child: Center(
                           child: Text(
-                            _kategoriList[index],
+                            kat,
                             style: TextStyle(
-                              color: isSelected ? (isDarkMode ? const Color(0xFF121212) : Colors.white) : subTextColor,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? Colors.white : subTextColor,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              fontFamily: 'Montserrat',
                               fontSize: 13,
-                              fontFamily: 'Inter'
                             ),
                           ),
                         ),
@@ -182,30 +192,35 @@ class _KulinerPageState extends State<KulinerPage> {
                 ),
               ),
 
-              // --- GRID MENU KULINER ---
+              // --- GRID DAFTAR MAKANAN / MINUMAN ---
               Expanded(
-                child: _filteredMenu.isEmpty
+                child: filteredList.isEmpty
                   ? Center(child: Text("Menu tidak ditemukan.", style: TextStyle(color: subTextColor)))
                   : GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10).copyWith(bottom: 100),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, 
-                        childAspectRatio: 0.65, 
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.72,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
-                      itemCount: _filteredMenu.length,
+                      itemCount: filteredList.length,
                       itemBuilder: (context, index) {
-                        final item = _filteredMenu[index];
+                        final item = filteredList[index];
                         debugPrint("Cek Gambar ${item['nama_menu']}: ${item['gambar']}");
                         return Container(
-                          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: ambientShadow,
+                            border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
+                          ),
                           padding: const EdgeInsets.all(12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               
-                              // --- PERUBAHAN UI: GAMBAR MENU BULAT ---
+                              // --- GAMBAR MENU ---
                               Center(
                                 child: Container(
                                   height: 100, width: 100,

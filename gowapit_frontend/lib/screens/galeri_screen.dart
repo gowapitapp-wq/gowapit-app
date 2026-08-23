@@ -477,10 +477,10 @@ class _GaleriScreenState extends State<GaleriScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    const Color primaryColor = Color(0xFF5E9190);
-    const Color celadonColor = Color(0xFFB3D89C);
-    final Color textColor = isDark ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF404846);
+    final Color primaryColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    const Color emeraldColor = Color(0xFF2E7D6A);
+    final Color textColor = isDark ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDark ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
 
     final filteredFeed = _getFilteredFeed();
     final List<String> categories = ["Semua", "Event", "Budaya"];

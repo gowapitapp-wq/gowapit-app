@@ -374,9 +374,9 @@ class _TiketPageState extends State<TiketPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFE5EBE8);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -425,12 +425,12 @@ class _TiketPageState extends State<TiketPage> {
   // ===========================================================================
   Widget _buildMenungguSection(bool isDarkMode) {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color tagBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFeef5f2);
-    final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
-    final List<BoxShadow> ambientShadow = isDarkMode ? [] : [BoxShadow(color: const Color(0xFF5E9190).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))];
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color tagBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFEBF3F0);
+    final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFFE5EBE8);
+    final List<BoxShadow> ambientShadow = isDarkMode ? [] : [BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))];
 
     return ValueListenableBuilder<List<Map<String, dynamic>>>(
       valueListenable: globalCart,
@@ -978,11 +978,11 @@ class BerhasilTicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    const Color successColor = Color(0xFF4CAF50);
-    final Color dividerColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    const Color successColor = Color(0xFF2E7D6A);
+    final Color dividerColor = isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8);
     final bool isAktif = data['status'] == 'Aktif';
 
     return Container(
@@ -991,8 +991,9 @@ class BerhasilTicketCard extends StatelessWidget {
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: isDarkMode ? [] : [
-          BoxShadow(color: const Color(0xFF5E9190).withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
         ],
+        border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

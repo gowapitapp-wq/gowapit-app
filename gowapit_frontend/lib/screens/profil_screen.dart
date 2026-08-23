@@ -327,16 +327,16 @@ class _ProfilPageState extends State<ProfilPage> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color dividerColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
-    final Color iconBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFF9DC3C2).withValues(alpha: 0.16);
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color dividerColor = isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8);
+    final Color iconBgColor = isDarkMode ? const Color(0xFF2C2C2E) : const Color(0xFF1E524D).withValues(alpha: 0.1);
 
     final List<BoxShadow> ambientShadow = isDarkMode
         ? []
         : [
-            BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.16), blurRadius: 15, offset: const Offset(0, 6))
+            BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
           ];
 
     return Scaffold(
@@ -366,7 +366,12 @@ class _ProfilPageState extends State<ProfilPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: ambientShadow,
+                      border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
+                    ),
                     child: Column(
                       children: [
                         GestureDetector(
@@ -579,8 +584,14 @@ class _ProfilPageState extends State<ProfilPage> {
   }
 
   Widget _buildMenuContainer(Color bgColor, List<BoxShadow> shadow, List<Widget> children) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: shadow,
+        border: Border.all(color: isDark ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
+      ),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),

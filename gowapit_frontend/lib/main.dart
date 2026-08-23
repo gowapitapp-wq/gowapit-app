@@ -107,20 +107,21 @@ class GoWapitApp extends StatelessWidget {
               backgroundColor: Colors.transparent,
               elevation: 0,
               centerTitle: true,
-              foregroundColor: Color(0xFF161d1b),
+              foregroundColor: Color(0xFF121E1C),
               titleTextStyle: TextStyle(
-                color: Color(0xFF161d1b),
+                color: Color(0xFF121E1C),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Montserrat',
               ),
             ),
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5E9190),
-              secondary: Color(0xFFB3D89C),
-              tertiary: Color(0xFFD0EFB1),
+              primary: Color(0xFF1E524D), // Deep Forest Pine
+              secondary: Color(0xFF2E7D6A), // Emerald Pine Accent
+              tertiary: Color(0xFFE59819), // Golden Amber
               surface: Color(0xFFFFFFFF),
-              onSurface: Color(0xFF161d1b),
+              onSurface: Color(0xFF121E1C),
+              onPrimary: Colors.white,
             ),
             useMaterial3: true,
           ),
@@ -143,10 +144,11 @@ class GoWapitApp extends StatelessWidget {
               ),
             ),
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF9DC3C2),
-              secondary: Color(0xFFB3D89C),
-              tertiary: Color(0xFFD0EFB1),
+              primary: Color(0xFF76B3AC),
+              secondary: Color(0xFF8FD4C1),
+              tertiary: Color(0xFFFDBB2D),
               surface: Color(0xFF1A2420),
+              onPrimary: Color(0xFF121E1C),
             ),
             useMaterial3: true,
           ),

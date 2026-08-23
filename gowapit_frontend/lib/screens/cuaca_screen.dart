@@ -99,14 +99,14 @@ class _CuacaScreenState extends State<CuacaScreen> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFD0EFB1);
+    final Color bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846);
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
 
     final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF9DC3C2).withValues(alpha: 0.18), blurRadius: 20, offset: const Offset(0, 8))
+      BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
     ];
 
     return Scaffold(

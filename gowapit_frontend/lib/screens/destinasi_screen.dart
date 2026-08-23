@@ -106,16 +106,16 @@ class _HoverableDestinasiCardState extends State<HoverableDestinasiCard> {
   @override
   Widget build(BuildContext context) {
     final Color cardColor = widget.isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color primaryColor = widget.isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color secondaryColor = const Color(0xFF9DC3C2);
+    final Color primaryColor = widget.isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color secondaryColor = const Color(0xFF2E7D6A);
     
     final Color currentBgColor = _isPressed ? primaryColor : cardColor;
-    final Color currentTitleColor = _isPressed ? Colors.white : (widget.isDarkMode ? Colors.white : const Color(0xFF161d1b));
-    final Color currentSubColor = _isPressed ? Colors.white.withValues(alpha: 0.8) : (widget.isDarkMode ? Colors.grey.shade400 : const Color(0xFF404846));
+    final Color currentTitleColor = _isPressed ? Colors.white : (widget.isDarkMode ? Colors.white : const Color(0xFF121E1C));
+    final Color currentSubColor = _isPressed ? Colors.white.withValues(alpha: 0.8) : (widget.isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A));
     final Color currentIconColor = _isPressed ? Colors.white : secondaryColor;
 
     final List<BoxShadow> ambientShadow = widget.isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF5E9190).withValues(alpha: 0.12), blurRadius: 15, offset: const Offset(0, 6))
+      BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
     ];
 
     final String nama = widget.item['name'] ?? widget.item['nama'] ?? '-';
@@ -123,6 +123,7 @@ class _HoverableDestinasiCardState extends State<HoverableDestinasiCard> {
     String rawGambar = widget.item['image'] ?? widget.item['gambar'] ?? 'assets/images/placeholder.jpeg';
     final String gambarPath = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
     final num ratingNum = (widget.item['rating'] is num) ? widget.item['rating'] : 0.0;
+    final String ratingStr = (ratingNum > 0) ? ratingNum.toStringAsFixed(1) : "4.8";
     final int jmlUlasan = (widget.item['jumlah_ulasan'] is num) ? (widget.item['jumlah_ulasan'] as num).toInt() : 0;
 
     return GestureDetector(
@@ -150,6 +151,7 @@ class _HoverableDestinasiCardState extends State<HoverableDestinasiCard> {
           color: currentBgColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: ambientShadow,
+          border: Border.all(color: widget.isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
         ),
         child: Row(
           children: [

@@ -69,7 +69,7 @@ class _FloatingDockState extends State<FloatingDock> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final primaryColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
 
     return SizedBox(
       height: 60, // Ketinggian terbatas agar tidak memenuhi layar

@@ -52,12 +52,12 @@ class _BookingScreenState extends State<BookingScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────
   Color get _themeColor {
-    if (_selectedPaket == null) return const Color(0xFF5E9190);
+    if (_selectedPaket == null) return const Color(0xFF1E524D);
     final n = _selectedPaket!['nama'].toString().toLowerCase();
-    if (n.contains('platinum')) return const Color(0xFF607D8B);
-    if (n.contains('gold')) return const Color(0xFFC5A059);
-    if (n.contains('silver')) return const Color(0xFF9E9E9E);
-    return const Color(0xFF5E9190);
+    if (n.contains('platinum')) return const Color(0xFF546E7A);
+    if (n.contains('gold')) return const Color(0xFFD48806);
+    if (n.contains('silver')) return const Color(0xFF78909C);
+    return const Color(0xFF1E524D);
   }
 
   String _fmtDate(DateTime d) =>
@@ -316,9 +316,9 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final Color card = dark ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color text = dark ? Colors.white : const Color(0xFF161d1b);
-    final Color sub = dark ? Colors.grey.shade400 : const Color(0xFF5A6B66);
-    final Color divider = dark ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
+    final Color text = dark ? Colors.white : const Color(0xFF121E1C);
+    final Color sub = dark ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
+    final Color divider = dark ? const Color(0xFF2C2C2E) : const Color(0xFFE5EBE8);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
