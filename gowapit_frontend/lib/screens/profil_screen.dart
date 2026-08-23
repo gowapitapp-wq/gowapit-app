@@ -581,7 +581,11 @@ class _ProfilPageState extends State<ProfilPage> {
   Widget _buildMenuContainer(Color bgColor, List<BoxShadow> shadow, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(16), boxShadow: shadow),
-      child: Column(children: children),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(children: children),
+      ),
     );
   }
 

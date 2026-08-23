@@ -329,7 +329,7 @@ class _BookingScreenState extends State<BookingScreen> {
         centerTitle: true,
         title: Text(
           "Pilih Paket",
-          style: TextStyle(color: txt, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 18),
+          style: TextStyle(color: text, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 18),
         ),
       ),
       body: Column(
