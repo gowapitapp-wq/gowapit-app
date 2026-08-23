@@ -353,7 +353,7 @@ class _ProfilPageState extends State<ProfilPage> {
             backgroundImage: _getAvatarImageProvider(),
           ),
         ),
-        title: const Text("Go Wapit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22, fontFamily: 'Montserrat')),
+        title: Text("Go Wapit", style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 22, fontFamily: 'Montserrat')),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryColor))

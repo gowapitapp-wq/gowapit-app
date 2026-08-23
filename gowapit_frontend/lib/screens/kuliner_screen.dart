@@ -138,7 +138,7 @@ class _KulinerPageState extends State<KulinerPage> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: primaryColor),
-        title: Text("Kuliner", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 20)),
+        title: Text("Kuliner", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 20)),
       ),
       body: _isLoading 
         ? Center(child: CircularProgressIndicator(color: primaryColor))

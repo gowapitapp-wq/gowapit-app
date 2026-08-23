@@ -24,7 +24,7 @@ class PetaScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false, 
-        title: Text("Peta Lokasi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Montserrat')),
+        title: Text("Peta Lokasi", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Montserrat')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 100), // Ruang untuk nav bar tembus pandang

@@ -93,10 +93,10 @@ class _FloatingDockState extends State<FloatingDock> with SingleTickerProviderSt
                 BoxShadow(
                   color: isDark
                       ? Colors.black.withValues(alpha: 0.40)
-                      : const Color(0xFF9DC3C2).withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  offset: const Offset(0, 5),
-                  spreadRadius: 1,
+                      : Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                  spreadRadius: 0,
                 ),
               ],
             ),
@@ -109,12 +109,12 @@ class _FloatingDockState extends State<FloatingDock> with SingleTickerProviderSt
                   decoration: BoxDecoration(
                     color: isDark
                         ? const Color(0xFF162524).withValues(alpha: 0.90)
-                        : Colors.white.withValues(alpha: 0.92),
+                        : Colors.white.withValues(alpha: 0.94),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.12)
-                          : const Color(0xFFB3D89C).withValues(alpha: 0.4),
+                          : const Color(0xFFE2E8F0),
                       width: 1.0,
                     ),
                   ),

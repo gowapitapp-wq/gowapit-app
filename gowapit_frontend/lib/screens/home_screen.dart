@@ -257,7 +257,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text("Welcome Back,", style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
-                          Text(_namaPengguna, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Montserrat')),
+                          Text(_namaPengguna, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor, fontFamily: 'Montserrat')),
                         ],
                       ),
                     ],
@@ -267,9 +267,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
                     child: Row(
                       children: [
-                        Icon(_weatherIcon, color: isDarkMode ? const Color(0xFF121212) : Colors.white, size: 14),
+                        Icon(_weatherIcon, color: Colors.white, size: 14),
                         const SizedBox(width: 6),
-                        Text(_isLoadingWeather ? "--" : _currentTemp, style: TextStyle(color: isDarkMode ? const Color(0xFF121212) : Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                        Text(_isLoadingWeather ? "--" : _currentTemp, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
                       ],
                     ),
                   )
@@ -287,13 +287,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   height: 48,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: isDarkMode ? Colors.grey.shade800 : secondaryColor.withValues(alpha: 0.3)),
+                    boxShadow: ambientShadow,
+                    border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: secondaryColor, size: 20),
+                      Icon(Icons.search, color: primaryColor, size: 20),
                       const SizedBox(width: 12),
                       Text("Cari destinasi, tiket, atau kuliner...", style: TextStyle(color: subTextColor, fontSize: 13)),
                     ],

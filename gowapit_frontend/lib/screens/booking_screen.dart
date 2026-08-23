@@ -327,9 +327,9 @@ class _BookingScreenState extends State<BookingScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: _themeColor),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           "Pilih Paket",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 18),
+          style: TextStyle(color: txt, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 18),
         ),
       ),
       body: Column(

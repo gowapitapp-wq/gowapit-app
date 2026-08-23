@@ -495,13 +495,13 @@ class _GaleriScreenState extends State<GaleriScreen> {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : primaryColor, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Galeri Wisata Wapit",
           style: TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: Colors.white,
+            color: textColor,
           ),
         ),
       ),

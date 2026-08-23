@@ -115,7 +115,7 @@ class _CuacaScreenState extends State<CuacaScreen> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: primaryColor),
-        title: const Text("Cuaca Wapit", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Montserrat')),
+        title: Text("Cuaca Wapit", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Montserrat')),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryColor))

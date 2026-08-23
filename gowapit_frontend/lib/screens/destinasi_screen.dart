@@ -42,6 +42,7 @@ class _DestinasiPageState extends State<DestinasiPage> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -50,9 +51,9 @@ class _DestinasiPageState extends State<DestinasiPage> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: primaryColor),
-        title: const Text(
+        title: Text(
           "Destinasi", 
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 20)
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 20)
         ),
       ),
       body: _isLoading 

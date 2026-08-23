@@ -375,6 +375,7 @@ class _TiketPageState extends State<TiketPage> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
     final Color dividerColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey.shade200;
 
     return Scaffold(
@@ -384,7 +385,7 @@ class _TiketPageState extends State<TiketPage> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: const Text("Keranjang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Montserrat')),
+        title: Text("Keranjang", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Montserrat')),
       ),
       body: Column(
         children: [
@@ -394,8 +395,11 @@ class _TiketPageState extends State<TiketPage> {
               height: 48,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white.withValues(alpha: 0.6),
+                color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: isDarkMode ? [] : [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3)),
+                ],
                 border: Border.all(color: dividerColor),
               ),
               child: Row(

@@ -43,25 +43,58 @@ class GoWapitApp extends StatelessWidget {
 
           builder: (context, child) {
             return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: isDark
-                      ? const [
-                          Color(0xFF162524), // Light Blue Dark tint
-                          Color(0xFF17241C), // Celadon Dark tint
-                          Color(0xFF101614), // Base Dark
-                        ]
-                      : const [
-                          Color(0xFF9DC3C2), // Light Blue
-                          Color(0xFFB3D89C), // Celadon
-                          Color(0xFFD0EFB1), // Tea Green
-                        ],
-                  stops: const [0.0, 0.55, 1.0],
-                ),
+              color: isDark ? const Color(0xFF141917) : Colors.white,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 1. Bayangan Logo Emboss di Background
+                  Center(
+                    child: IgnorePointer(
+                      child: Opacity(
+                        opacity: isDark ? 0.05 : 0.065,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Lapisan Shadow (Bawah-Kanan) untuk efek kedalaman emboss
+                            Transform.translate(
+                              offset: const Offset(3.5, 3.5),
+                              child: Image.asset(
+                                'assets/images/Logo.png',
+                                width: 320,
+                                fit: BoxFit.contain,
+                                color: isDark ? Colors.black : const Color(0xFF2C534F),
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                            ),
+                            // Lapisan Highlight (Atas-Kiri) untuk efek timbul emboss
+                            Transform.translate(
+                              offset: const Offset(-2.5, -2.5),
+                              child: Image.asset(
+                                'assets/images/Logo.png',
+                                width: 320,
+                                fit: BoxFit.contain,
+                                color: isDark ? const Color(0xFF4A6B65) : Colors.white,
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                            ),
+                            // Lapisan Siluet Logo Utama
+                            Image.asset(
+                              'assets/images/Logo.png',
+                              width: 320,
+                              fit: BoxFit.contain,
+                              color: isDark ? const Color(0xFF1E2F2B) : const Color(0xFF5E9190),
+                              colorBlendMode: BlendMode.srcIn,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 2. Konten Layar Aplikasi
+                  if (child != null) child,
+                ],
               ),
-              child: child,
             );
           },
 
@@ -69,12 +102,23 @@ class GoWapitApp extends StatelessWidget {
           theme: ThemeData(
             brightness: Brightness.light,
             fontFamily: 'Inter',
-            // PENTING: Scaffold diatur transparan agar gradien dari builder di atas bisa terlihat
             scaffoldBackgroundColor: Colors.transparent, 
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              foregroundColor: Color(0xFF161d1b),
+              titleTextStyle: TextStyle(
+                color: Color(0xFF161d1b),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+              ),
+            ),
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5E9190), // Contras Light Blue for text/action
-              secondary: Color(0xFFB3D89C), // Celadon
-              tertiary: Color(0xFFD0EFB1), // Tea Green
+              primary: Color(0xFF5E9190),
+              secondary: Color(0xFFB3D89C),
+              tertiary: Color(0xFFD0EFB1),
               surface: Color(0xFFFFFFFF),
               onSurface: Color(0xFF161d1b),
             ),
@@ -85,12 +129,23 @@ class GoWapitApp extends StatelessWidget {
           darkTheme: ThemeData(
             brightness: Brightness.dark,
             fontFamily: 'Inter',
-            // PENTING: Scaffold diatur transparan
             scaffoldBackgroundColor: Colors.transparent,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              foregroundColor: Colors.white,
+              titleTextStyle: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+              ),
+            ),
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF9DC3C2), // Light Blue
-              secondary: Color(0xFFB3D89C), // Celadon
-              tertiary: Color(0xFFD0EFB1), // Tea Green
+              primary: Color(0xFF9DC3C2),
+              secondary: Color(0xFFB3D89C),
+              tertiary: Color(0xFFD0EFB1),
               surface: Color(0xFF1A2420),
             ),
             useMaterial3: true,
