@@ -51,51 +51,47 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final Color bgColor = isDarkMode ? const Color(0xFF141917) : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: Container(
         width: double.infinity,
-        // --- GRADIENT BACKGROUND KHAS GO WAPIT ---
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDarkMode 
-                ? [const Color(0xFF162524), const Color(0xFF101614)] 
-                : [const Color(0xFF9DC3C2), const Color(0xFFB3D89C), const Color(0xFFD0EFB1)],
-          ),
-        ),
+        height: double.infinity,
+        color: bgColor,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // --- LOGO TENGAH ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.park_rounded, // Ikon pohon/alam
-                    color: Color(0xFF5E9190),
-                    size: 32,
-                  ),
+            // --- LOGO TENGAH APLIKASI ---
+            Image.asset(
+              'assets/images/Logo.png',
+              width: 100,
+              height: 100,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E524D).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                const Text(
-                  "Go Wapit",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                    letterSpacing: -0.5,
-                  ),
+                child: const Icon(
+                  Icons.park_rounded,
+                  color: Color(0xFF1E524D),
+                  size: 36,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Go Wapit",
+              style: TextStyle(
+                color: textColor,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+                letterSpacing: -0.5,
+              ),
             ),
           ],
         ),
