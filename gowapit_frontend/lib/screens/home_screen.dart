@@ -359,19 +359,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
               const SizedBox(height: 32),
 
-              // --- 4. GRID MENU IKON ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildMenuIcon(Icons.landscape, "Destinasi", cardColor, primaryColor, textColor, ambientShadow, () async {
-                    await Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage()));
-                    _fetchDestinasiData();
-                  }),
-                  _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
-                  _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()))),
-                  _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
-                  _buildMenuIcon(Icons.photo_library_rounded, "Galeri", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GaleriScreen()))),
-                ],
+              // --- 4. MENU IKON (SCROLL HORIZONTAL) ---
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildMenuIcon(Icons.landscape, "Destinasi", cardColor, primaryColor, textColor, ambientShadow, () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage()));
+                      _fetchDestinasiData();
+                    }),
+                    const SizedBox(width: 16),
+                    _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
+                    const SizedBox(width: 16),
+                    _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()))),
+                    const SizedBox(width: 16),
+                    _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
+                    const SizedBox(width: 16),
+                    _buildMenuIcon(Icons.photo_library_rounded, "Galeri", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GaleriScreen()))),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
 
@@ -551,17 +558,38 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
   Widget _buildMenuIcon(IconData icon, String label, Color cardColor, Color primaryColor, Color textColor, List<BoxShadow> shadow, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), boxShadow: shadow),
-            child: Icon(icon, color: primaryColor, size: 24),
-          ),
-          const SizedBox(height: 7),
-          Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: textColor)),
-        ],
+      child: SizedBox(
+        width: 68,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: shadow,
+              ),
+              child: Center(
+                child: Icon(icon, color: primaryColor, size: 26),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+                fontFamily: 'Inter',
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
