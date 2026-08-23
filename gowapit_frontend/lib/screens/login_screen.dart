@@ -285,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.lock_reset, color: Color(0xFF5E9190)),
+            Icon(Icons.lock_reset, color: Color(0xFF1E524D)),
             SizedBox(width: 10),
             Text("Lupa Password?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
@@ -318,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5E9190),
+              backgroundColor: const Color(0xFF1E524D),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -340,428 +340,453 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
+  // --- LOGO EMBOSS TRANSPARAN DI BELAKANG ELEMEN KARTU ---
+  Widget _buildEmbossedWatermark(bool isDark) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: SizedBox(
+            width: 250,
+            height: 250,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. Emboss Dark Shadow Offset (Bawah Kanan)
+                Transform.translate(
+                  offset: const Offset(3.0, 3.0),
+                  child: Opacity(
+                    opacity: isDark ? 0.12 : 0.08,
+                    child: Image.asset(
+                      'assets/images/Logo.png',
+                      fit: BoxFit.contain,
+                      color: isDark ? Colors.black : const Color(0xFF1E524D),
+                    ),
+                  ),
+                ),
+                // 2. Emboss White Highlight Offset (Atas Kiri)
+                Transform.translate(
+                  offset: const Offset(-2.5, -2.5),
+                  child: Opacity(
+                    opacity: isDark ? 0.06 : 0.85,
+                    child: Image.asset(
+                      'assets/images/Logo.png',
+                      fit: BoxFit.contain,
+                      color: isDark ? const Color(0xFF76B3AC) : Colors.white,
+                    ),
+                  ),
+                ),
+                // 3. Base Silhouette Logo (Transparan Halus)
+                Opacity(
+                  opacity: isDark ? 0.06 : 0.04,
+                  child: Image.asset(
+                    'assets/images/Logo.png',
+                    fit: BoxFit.contain,
+                    color: isDark ? Colors.white : const Color(0xFF1E524D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDark ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color cardBg = isDark ? const Color(0xFF1B2623) : Colors.white;
-    final Color textColor = isDark ? Colors.white : const Color(0xFF162421);
-    final Color subTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final Color primaryColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color cardBg = isDark ? const Color(0xFF1A2421) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF121E1C);
+    final Color subTextColor = isDark ? Colors.white70 : const Color(0xFF4A5D5A);
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    const Color(0xFF162524),
-                    const Color(0xFF17241C),
-                    const Color(0xFF101614),
-                  ]
-                : [
-                    const Color(0xFF9DC3C2),
-                    const Color(0xFFB3D89C),
-                    const Color(0xFFD0EFB1),
-                  ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Decorative background glowing circles
-            Positioned(
-              top: -60,
-              right: -50,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9DC3C2).withValues(alpha: isDark ? 0.15 : 0.35),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -80,
-              left: -60,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFB3D89C).withValues(alpha: isDark ? 0.12 : 0.30),
-                ),
-              ),
-            ),
+      backgroundColor: isDark ? const Color(0xFF121816) : Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.5)
+                            : const Color(0xFF1E524D).withValues(alpha: 0.10),
+                        blurRadius: 36,
+                        offset: const Offset(0, 10),
+                        spreadRadius: 1,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : const Color(0xFFDDE6E2),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
+                      children: [
+                        // --- LOGO EMBOSS TRANSPARAN DI BELAKANG ELEMEN LOGIN ---
+                        _buildEmbossedWatermark(isDark),
 
-            // Main Centered Content
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 440),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black.withValues(alpha: 0.4)
-                                  : const Color(0xFF2A4D41).withValues(alpha: 0.12),
-                              blurRadius: 32,
-                              offset: const Offset(0, 12),
-                              spreadRadius: 2,
-                            ),
-                          ],
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.04),
-                            width: 1,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 32.0),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // --- ANIMATED LOTTIE LOGO ---
-                              Center(
-                                child: SizedBox(
-                                  height: 110,
-                                  width: 110,
-                                  child: Lottie.asset(
-                                    'assets/lottie/login.json',
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 72,
-                                      height: 72,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: primaryColor.withValues(alpha: 0.25),
-                                            blurRadius: 16,
-                                            offset: const Offset(0, 6),
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.all(10),
-                                      child: Image.asset(
-                                        'assets/images/Logo.png',
-                                        fit: BoxFit.contain,
+                        // --- ELEMEN FORM LOGIN / REGISTER ---
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 26.0, vertical: 30.0),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // --- ANIMATED LOTTIE LOGO ---
+                                Center(
+                                  child: SizedBox(
+                                    height: 100,
+                                    width: 100,
+                                    child: Lottie.asset(
+                                      'assets/lottie/login.json',
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 68,
+                                        height: 68,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: primaryColor.withValues(alpha: 0.25),
+                                              blurRadius: 16,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ],
+                                        ),
+                                        padding: const EdgeInsets.all(10),
+                                        child: Image.asset(
+                                          'assets/images/Logo.png',
+                                          fit: BoxFit.contain,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
+                                const SizedBox(height: 10),
 
-                              // --- TITLE & SUBTITLE ---
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
-                                child: Column(
-                                  key: ValueKey<bool>(isLoginMode),
+                                // --- TITLE & SUBTITLE ---
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  child: Column(
+                                    key: ValueKey<bool>(isLoginMode),
+                                    children: [
+                                      Text(
+                                        isLoginMode ? "Selamat Datang!" : "Buat Akun Baru!",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w800,
+                                          color: textColor,
+                                          fontFamily: 'Montserrat',
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        isLoginMode
+                                            ? "Masuk untuk menjelajahi keindahan Hutan Pinus Wapit"
+                                            : "Daftar untuk menikmati berbagai fasilitas dan kemudahan",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: subTextColor,
+                                          fontFamily: 'Inter',
+                                          height: 1.35,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // --- SOCIAL AUTH BUTTON (GOOGLE) ---
+                                _buildSocialButton(
+                                  onPressed: _isLoading ? null : _loginWithGoogle,
+                                  isDark: isDark,
+                                  icon: const GoogleLogoWidget(size: 20),
+                                  label: "Lanjutkan dengan Google",
+                                  backgroundColor: isDark ? const Color(0xFF24322C) : Colors.white,
+                                  textColor: textColor,
+                                  borderColor: isDark
+                                      ? Colors.white.withValues(alpha: 0.15)
+                                      : const Color(0xFFDDE6E2),
+                                ),
+                                const SizedBox(height: 22),
+
+                                // --- OR DIVIDER ---
+                                Row(
                                   children: [
-                                    Text(
-                                      isLoginMode ? "Selamat Datang!" : "Buat Akun Baru!",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
-                                        color: textColor,
-                                        letterSpacing: -0.5,
+                                    Expanded(
+                                      child: Divider(
+                                        color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                                        thickness: 1,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      isLoginMode
-                                          ? "Masuk untuk menjelajahi keindahan Hutan Pinus Wapit"
-                                          : "Daftar untuk menikmati berbagai fasilitas dan kemudahan",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: subTextColor,
-                                        height: 1.35,
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: Text(
+                                        isLoginMode ? "atau masuk dengan email" : "atau daftar dengan email",
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: subTextColor,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(
+                                        color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                                        thickness: 1,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 24),
+                                const SizedBox(height: 20),
 
-                              // --- SOCIAL AUTH BUTTON (GOOGLE) ---
-                              _buildSocialButton(
-                                onPressed: _isLoading ? null : _loginWithGoogle,
-                                isDark: isDark,
-                                icon: const GoogleLogoWidget(size: 20),
-                                label: "Lanjutkan dengan Google",
-                                backgroundColor: isDark ? const Color(0xFF283830) : Colors.white,
-                                textColor: isDark ? Colors.white : const Color(0xFF374151),
-                                borderColor: isDark
-                                    ? Colors.white.withValues(alpha: 0.15)
-                                    : const Color(0xFFE5E7EB),
-                              ),
-                              const SizedBox(height: 22),
+                                // --- INPUT FIELDS ---
+                                AnimatedSize(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  child: Column(
+                                    children: [
+                                      // Full Name Field (Register Mode Only)
+                                      if (!isLoginMode) ...[
+                                        _buildModernField(
+                                          controller: _nameController,
+                                          hint: "Nama Lengkap",
+                                          icon: Icons.person_outline_rounded,
+                                          isDark: isDark,
+                                          validator: (v) {
+                                            if (v == null || v.trim().isEmpty) {
+                                              return "Nama lengkap tidak boleh kosong";
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 14),
+                                      ],
 
-                              // --- OR DIVIDER ---
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(
-                                      color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
-                                      thickness: 1,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: Text(
-                                      isLoginMode ? "atau masuk dengan email" : "atau daftar dengan email",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: subTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(
-                                      color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
-                                      thickness: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-
-                              // --- INPUT FIELDS ---
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                                child: Column(
-                                  children: [
-                                    // Full Name Field (Register Mode Only)
-                                    if (!isLoginMode) ...[
+                                      // Email Field
                                       _buildModernField(
-                                        controller: _nameController,
-                                        hint: "Nama Lengkap",
-                                        icon: Icons.person_outline_rounded,
+                                        controller: _emailController,
+                                        hint: "Alamat Email",
+                                        icon: Icons.alternate_email_rounded,
+                                        keyboardType: TextInputType.emailAddress,
                                         isDark: isDark,
                                         validator: (v) {
                                           if (v == null || v.trim().isEmpty) {
-                                            return "Nama lengkap tidak boleh kosong";
+                                            return "Email tidak boleh kosong";
+                                          }
+                                          if (!v.contains('@') || !v.contains('.')) {
+                                            return "Format email tidak valid";
                                           }
                                           return null;
                                         },
                                       ),
                                       const SizedBox(height: 14),
-                                    ],
 
-                                    // Email Field
-                                    _buildModernField(
-                                      controller: _emailController,
-                                      hint: "Alamat Email",
-                                      icon: Icons.alternate_email_rounded,
-                                      keyboardType: TextInputType.emailAddress,
-                                      isDark: isDark,
-                                      validator: (v) {
-                                        if (v == null || v.trim().isEmpty) {
-                                          return "Email tidak boleh kosong";
-                                        }
-                                        if (!v.contains('@') || !v.contains('.')) {
-                                          return "Format email tidak valid";
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                    const SizedBox(height: 14),
-
-                                    // Password Field
-                                    _buildModernField(
-                                      controller: _passwordController,
-                                      hint: "Kata Sandi",
-                                      icon: Icons.lock_outline_rounded,
-                                      isPassword: true,
-                                      obscureText: _obscurePassword,
-                                      isDark: isDark,
-                                      onTogglePassword: () {
-                                        setState(() => _obscurePassword = !_obscurePassword);
-                                      },
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty) {
-                                          return "Kata sandi tidak boleh kosong";
-                                        }
-                                        if (v.length < 6) {
-                                          return "Kata sandi minimal 6 karakter";
-                                        }
-                                        return null;
-                                      },
-                                    ),
-
-                                    // Referral Code Field (Register Mode Only)
-                                    if (!isLoginMode) ...[
-                                      const SizedBox(height: 14),
+                                      // Password Field
                                       _buildModernField(
-                                        controller: _referralCodeController,
-                                        hint: "Kode Referral (opsional)",
-                                        icon: Icons.card_giftcard_rounded,
+                                        controller: _passwordController,
+                                        hint: "Kata Sandi",
+                                        icon: Icons.lock_outline_rounded,
+                                        isPassword: true,
+                                        obscureText: _obscurePassword,
                                         isDark: isDark,
-                                        validator: (v) => null,
+                                        onTogglePassword: () {
+                                          setState(() => _obscurePassword = !_obscurePassword);
+                                        },
+                                        validator: (v) {
+                                          if (v == null || v.isEmpty) {
+                                            return "Kata sandi tidak boleh kosong";
+                                          }
+                                          if (v.length < 6) {
+                                            return "Kata sandi minimal 6 karakter";
+                                          }
+                                          return null;
+                                        },
                                       ),
-                                    ],
-                                  ],
-                                ),
-                              ),
 
-                              // --- FORGOT PASSWORD (LOGIN MODE) ---
-                              if (isLoginMode) ...[
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
+                                      // Referral Code Field (Register Mode Only)
+                                      if (!isLoginMode) ...[
+                                        const SizedBox(height: 14),
+                                        _buildModernField(
+                                          controller: _referralCodeController,
+                                          hint: "Kode Referral (opsional)",
+                                          icon: Icons.card_giftcard_rounded,
+                                          isDark: isDark,
+                                          validator: (v) => null,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+
+                                // --- FORGOT PASSWORD (LOGIN MODE) ---
+                                if (isLoginMode) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: GestureDetector(
+                                      onTap: _showForgotPasswordDialog,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        child: Text(
+                                          "Lupa password?",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryColor,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 22),
+
+                                // --- PRIMARY SUBMIT BUTTON ---
+                                SizedBox(
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading ? null : _submitAuth,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 2,
+                                      shadowColor: primaryColor.withValues(alpha: 0.4),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2.5,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                isLoginMode ? "Masuk ke Akun" : "Daftar Sekarang",
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.3,
+                                                  fontFamily: 'Montserrat',
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Icon(Icons.arrow_forward_rounded, size: 18),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 22),
+
+                                // --- TOGGLE LOGIN / REGISTER MODE ---
+                                Center(
                                   child: GestureDetector(
-                                    onTap: _showForgotPasswordDialog,
+                                    onTap: () {
+                                      setState(() {
+                                        isLoginMode = !isLoginMode;
+                                        _formKey.currentState?.reset();
+                                      });
+                                    },
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 4),
-                                      child: Text(
-                                        "Lupa password?",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: primaryColor,
+                                      child: RichText(
+                                        textAlign: TextAlign.center,
+                                        text: TextSpan(
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: subTextColor,
+                                            fontFamily: 'Montserrat',
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: isLoginMode
+                                                  ? "Belum memiliki akun? "
+                                                  : "Sudah memiliki akun? ",
+                                            ),
+                                            TextSpan(
+                                              text: isLoginMode ? "Daftar Sekarang" : "Masuk di Sini",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // --- TERMS & PRIVACY FOOTER LINK ---
+                                Center(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const TermsPrivacyPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      "Syarat & Ketentuan Privasi",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: subTextColor.withValues(alpha: 0.8),
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: subTextColor.withValues(alpha: 0.5),
+                                        fontFamily: 'Inter',
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 22),
-
-                              // --- PRIMARY SUBMIT BUTTON ---
-                              SizedBox(
-                                height: 50,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _submitAuth,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    elevation: 2,
-                                    shadowColor: primaryColor.withValues(alpha: 0.4),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                  ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2.5,
-                                          ),
-                                        )
-                                      : Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              isLoginMode ? "Masuk ke Akun" : "Daftar Sekarang",
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            const Icon(Icons.arrow_forward_rounded, size: 18),
-                                          ],
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 22),
-
-                              // --- TOGGLE LOGIN / REGISTER MODE ---
-                              Center(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      isLoginMode = !isLoginMode;
-                                      _formKey.currentState?.reset();
-                                    });
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                    child: RichText(
-                                      textAlign: TextAlign.center,
-                                      text: TextSpan(
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: subTextColor,
-                                          fontFamily: 'Montserrat',
-                                        ),
-                                        children: [
-                                          TextSpan(
-                                            text: isLoginMode
-                                                ? "Belum memiliki akun? "
-                                                : "Sudah memiliki akun? ",
-                                          ),
-                                          TextSpan(
-                                            text: isLoginMode ? "Daftar Sekarang" : "Masuk di Sini",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: primaryColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // --- TERMS & PRIVACY FOOTER LINK ---
-                              Center(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const TermsPrivacyPage(),
-                                      ),
-                                    );
-                                  },
-                                  child: Text(
-                                    "Syarat & Ketentuan Privasi",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: subTextColor.withValues(alpha: 0.8),
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: subTextColor.withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -780,9 +805,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     bool obscureText = false,
     VoidCallback? onTogglePassword,
   }) {
-    final Color fieldBg = isDark ? const Color(0xFF16221D) : const Color(0xFFF7FAF8);
-    final Color borderColor = isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
-    const Color activeColor = Color(0xFF5E9190);
+    final Color fieldBg = isDark ? const Color(0xFF16221D) : const Color(0xFFF6FAF8);
+    final Color borderColor = isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFDDE6E2);
+    final Color activeColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
 
     return TextFormField(
       controller: controller,
@@ -791,18 +816,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       validator: validator,
       style: TextStyle(
         fontSize: 14,
-        color: isDark ? Colors.white : const Color(0xFF1F2937),
+        color: isDark ? Colors.white : const Color(0xFF121E1C),
+        fontFamily: 'Inter',
       ),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
           fontSize: 13.5,
           color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+          fontFamily: 'Inter',
         ),
         prefixIcon: Icon(
           icon,
           size: 20,
-          color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+          color: isDark ? Colors.white54 : const Color(0xFF1E524D).withValues(alpha: 0.7),
         ),
         suffixIcon: isPassword
             ? IconButton(
@@ -823,7 +850,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: activeColor, width: 1.8),
+          borderSide: BorderSide(color: activeColor, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -871,6 +898,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: textColor,
+                fontFamily: 'Montserrat',
               ),
             ),
           ],
