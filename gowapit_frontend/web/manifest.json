@@ -1,13 +1,14 @@
 {
-    "name": "gowapit_frontend",
-    "short_name": "gowapit_frontend",
+    "name": "Go Wapit - Wisata Hutan Pinus Wapit",
+    "short_name": "Go Wapit",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#5E9190",
+    "theme_color": "#5E9190",
+    "description": "Aplikasi wisata Hutan Pinus Wapit, Umbul Jumprit, Temanggung",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["travel", "entertainment"],
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -30,6 +31,12 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
         }
     ]
 }

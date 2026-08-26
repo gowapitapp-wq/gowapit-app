@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -264,6 +265,10 @@ class _ProfilPageState extends State<ProfilPage> {
   }
 
   void _showImageSourcePicker(TextEditingController nameController, StateSetter setModalState) {
+    if (kIsWeb) {
+      _pickImage(ImageSource.gallery, nameController, setModalState);
+      return;
+    }
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(

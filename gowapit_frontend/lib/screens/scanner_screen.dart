@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -19,7 +20,7 @@ class ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<ScannerScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _codeController = TextEditingController();
-  late MobileScannerController _cameraController;
+  MobileScannerController? _cameraController;
 
   bool _isLoading = false;
   bool _isProcessingScan = false;
@@ -40,7 +41,9 @@ class _ScannerScreenState extends State<ScannerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initScannerController();
+    if (!kIsWeb) {
+      _initScannerController();
+    }
     _loadStaffProfile();
 
     _animController = AnimationController(
@@ -63,10 +66,11 @@ class _ScannerScreenState extends State<ScannerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    if (kIsWeb) return;
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      _cameraController.stop().catchError((_) {});
+      _cameraController?.stop().catchError((_) {});
     } else if (state == AppLifecycleState.resumed) {
-      _cameraController.start().catchError((_) {});
+      _cameraController?.start().catchError((_) {});
     }
   }
 
@@ -74,18 +78,21 @@ class _ScannerScreenState extends State<ScannerScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
-    _cameraController.stop().catchError((_) {});
-    _cameraController.dispose();
+    if (!kIsWeb) {
+      _cameraController?.stop().catchError((_) {});
+      _cameraController?.dispose();
+    }
     _codeController.dispose();
     super.dispose();
   }
 
   Future<void> _restartCamera() async {
+    if (kIsWeb) return;
     setState(() => _isCameraRestarting = true);
     try {
-      await _cameraController.stop().catchError((_) {});
+      await _cameraController?.stop().catchError((_) {});
       await Future.delayed(const Duration(milliseconds: 300));
-      await _cameraController.start().catchError((e) {
+      await _cameraController?.start().catchError((e) {
         debugPrint("Gagal start camera: $e");
       });
     } catch (e) {
@@ -642,213 +649,243 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
             const SizedBox(height: 20),
 
-            // --- LIVE CAMERA SCANNER FRAME WITH MOBILE SCANNER ---
-            Container(
-              width: double.infinity,
-              height: 290,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF141F1C) : const Color(0xFF1A2A26),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: celadonColor.withValues(alpha: 0.5), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // LIVE CAMERA PREVIEW
-                    MobileScanner(
-                      controller: _cameraController,
-                      onDetect: (BarcodeCapture capture) {
-                        if (_isProcessingScan || _isLoading) return;
-                        final List<Barcode> barcodes = capture.barcodes;
-                        for (final barcode in barcodes) {
-                          final String? code = barcode.rawValue;
-                          if (code != null && code.isNotEmpty) {
-                            setState(() => _isProcessingScan = true);
-                            _codeController.text = code;
-                            _validateTicketCode(code);
-                            break;
+            // --- LIVE CAMERA SCANNER FRAME / WEB FALLBACK ---
+            if (!kIsWeb) ...[
+              // --- MOBILE: LIVE CAMERA SCANNER FRAME WITH MOBILE SCANNER ---
+              Container(
+                width: double.infinity,
+                height: 290,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF141F1C) : const Color(0xFF1A2A26),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: celadonColor.withValues(alpha: 0.5), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // LIVE CAMERA PREVIEW
+                      MobileScanner(
+                        controller: _cameraController!,
+                        onDetect: (BarcodeCapture capture) {
+                          if (_isProcessingScan || _isLoading) return;
+                          final List<Barcode> barcodes = capture.barcodes;
+                          for (final barcode in barcodes) {
+                            final String? code = barcode.rawValue;
+                            if (code != null && code.isNotEmpty) {
+                              setState(() => _isProcessingScan = true);
+                              _codeController.text = code;
+                              _validateTicketCode(code);
+                              break;
+                            }
                           }
-                        }
-                      },
-                      errorBuilder: (context, error, child) {
-                        final String errCode = error.errorCode.name;
-                        final String errMsg = error.errorDetails?.message ?? "Inisialisasi kamera gagal";
+                        },
+                        errorBuilder: (context, error, child) {
+                          final String errCode = error.errorCode.name;
+                          final String errMsg = error.errorDetails?.message ?? "Inisialisasi kamera gagal";
 
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.videocam_off_outlined, color: Colors.orangeAccent, size: 42),
-                                const SizedBox(height: 10),
-                                Text(
-                                  errCode == "permissionDenied"
-                                      ? "Izin kamera belum aktif di aplikasi"
-                                      : "Kamera perlu diinisialisasi ulang ($errCode)",
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  errMsg,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
-                                ),
-                                const SizedBox(height: 14),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.videocam_off_outlined, color: Colors.orangeAccent, size: 42),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    errCode == "permissionDenied"
+                                        ? "Izin kamera belum aktif di aplikasi"
+                                        : "Kamera perlu diinisialisasi ulang ($errCode)",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                                   ),
-                                  onPressed: _isCameraRestarting ? null : _restartCamera,
-                                  icon: _isCameraRestarting
-                                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                      : const Icon(Icons.refresh_rounded, size: 16),
-                                  label: Text(_isCameraRestarting ? "Menghubungkan..." : "Aktifkan / Coba Lagi"),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    errMsg,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    ),
+                                    onPressed: _isCameraRestarting ? null : _restartCamera,
+                                    icon: _isCameraRestarting
+                                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                        : const Icon(Icons.refresh_rounded, size: 16),
+                                    label: Text(_isCameraRestarting ? "Menghubungkan..." : "Aktifkan / Coba Lagi"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Viewfinder Corners Overlays
+                      Positioned(top: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
+                      Positioned(top: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
+                      Positioned(bottom: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
+                      Positioned(bottom: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
+
+                      // Animated Scanning Laser Line
+                      AnimatedBuilder(
+                        animation: _scanLineAnimation,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: 290 * _scanLineAnimation.value,
+                            left: 36,
+                            right: 36,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Colors.transparent, Color(0xFFD0EFB1), Color(0xFF9DC3C2), Colors.transparent],
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // Viewfinder Corners Overlays
-                    Positioned(top: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
-                    Positioned(top: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(top: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
-                    Positioned(bottom: 20, left: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), left: BorderSide(color: celadonColor, width: 4))))),
-                    Positioned(bottom: 20, right: 20, child: Container(width: 28, height: 28, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: celadonColor, width: 4), right: BorderSide(color: celadonColor, width: 4))))),
-
-                    // Animated Scanning Laser Line
-                    AnimatedBuilder(
-                      animation: _scanLineAnimation,
-                      builder: (context, child) {
-                        return Positioned(
-                          top: 290 * _scanLineAnimation.value,
-                          left: 36,
-                          right: 36,
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Colors.transparent, Color(0xFFD0EFB1), Color(0xFF9DC3C2), Colors.transparent],
+                                boxShadow: [
+                                  BoxShadow(color: const Color(0xFFD0EFB1).withValues(alpha: 0.9), blurRadius: 12, spreadRadius: 3),
+                                ],
                               ),
-                              boxShadow: [
-                                BoxShadow(color: const Color(0xFFD0EFB1).withValues(alpha: 0.9), blurRadius: 12, spreadRadius: 3),
-                              ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
 
-                    // Quick Camera Controls (Restart, Torch & Flip)
-                    Positioned(
-                      top: 14,
-                      left: 14,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                          tooltip: "Muat Ulang Kamera",
-                          onPressed: _restartCamera,
+                      // Quick Camera Controls (Restart, Torch & Flip)
+                      Positioned(
+                        top: 14,
+                        left: 14,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                            tooltip: "Muat Ulang Kamera",
+                            onPressed: _restartCamera,
+                          ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      top: 14,
-                      right: 14,
-                      child: Row(
-                        children: [
-                          // Torch Button
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                                color: _isTorchOn ? Colors.amber : Colors.white70,
-                                size: 20,
-                              ),
-                              tooltip: "Senter Kamera",
-                              onPressed: () async {
-                                await _cameraController.toggleTorch();
-                                setState(() => _isTorchOn = !_isTorchOn);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Camera Flip Button
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white70, size: 20),
-                              tooltip: "Ganti Kamera Depan/Belakang",
-                              onPressed: () => _cameraController.switchCamera(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Helper Bottom Text
-                    Positioned(
-                      bottom: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      Positioned(
+                        top: 14,
+                        right: 14,
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (_isProcessingScan) ...[
-                              const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            // Torch Button
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(width: 8),
-                              const Text("Memvalidasi kode...", style: TextStyle(color: Colors.white, fontSize: 11)),
-                            ] else ...[
-                              const Icon(Icons.qr_code_scanner_rounded, size: 14, color: Colors.white70),
-                              const SizedBox(width: 6),
-                              const Text(
-                                "Arahkan kamera ke QR Code Tiket",
-                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                              child: IconButton(
+                                icon: Icon(
+                                  _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                  color: _isTorchOn ? Colors.amber : Colors.white70,
+                                  size: 20,
+                                ),
+                                tooltip: "Senter Kamera",
+                                onPressed: () async {
+                                  await _cameraController!.toggleTorch();
+                                  setState(() => _isTorchOn = !_isTorchOn);
+                                },
                               ),
-                            ],
+                            ),
+                            const SizedBox(width: 8),
+                            // Camera Flip Button
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white70, size: 20),
+                                tooltip: "Ganti Kamera Depan/Belakang",
+                                onPressed: () => _cameraController!.switchCamera(),
+                              ),
+                            ),
                           ],
                         ),
                       ),
+
+                      // Helper Bottom Text
+                      Positioned(
+                        bottom: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_isProcessingScan) ...[
+                                const SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text("Memvalidasi kode...", style: TextStyle(color: Colors.white, fontSize: 11)),
+                              ] else ...[
+                                const Icon(Icons.qr_code_scanner_rounded, size: 14, color: Colors.white70),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  "Arahkan kamera ke QR Code Tiket",
+                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              // --- WEB FALLBACK: Kartu info tanpa kamera ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF141F1C) : const Color(0xFFF0F7F5),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.web_rounded, size: 48, color: primaryColor.withValues(alpha: 0.6)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Mode Web — Kamera Tidak Tersedia",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Montserrat'),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Gunakan form input manual di bawah untuk memvalidasi kode tiket.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey.shade600),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
 
             const SizedBox(height: 20),
 
