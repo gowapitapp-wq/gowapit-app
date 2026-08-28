@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -180,6 +181,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: kIsWeb ? ApiConfig.googleWebClientId : null,
         serverClientId: ApiConfig.googleWebClientId,
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
