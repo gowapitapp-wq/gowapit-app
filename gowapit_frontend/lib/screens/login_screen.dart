@@ -193,12 +193,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
 
-      if (idToken == null || idToken.isEmpty) {
+      if ((idToken == null || idToken.isEmpty) && (accessToken == null || accessToken.isEmpty) && googleUser.email.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Gagal mendapatkan ID Token dari Google."),
+            content: const Text("Gagal mendapatkan izin autentikasi dari akun Google."),
             backgroundColor: const Color(0xFFD32F2F),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -211,7 +212,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       final response = await http.post(
         authUri,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"id_token": idToken}),
+        body: jsonEncode({
+          "id_token": idToken,
+          "access_token": accessToken,
+          "email": googleUser.email,
+          "nama_lengkap": googleUser.displayName,
+          "google_sub": googleUser.id,
+          "foto_profil": googleUser.photoUrl,
+        }),
       );
 
       Map<String, dynamic> responseData = {};
