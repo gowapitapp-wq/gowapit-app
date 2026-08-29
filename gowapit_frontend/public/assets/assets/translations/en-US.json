@@ -1,0 +1,10 @@
+{
+  "profile": {
+    "activity": "ACTIVITY",
+    "settings": "SETTINGS",
+    "choose_language": "Choose Language",
+    "theme": "Theme",
+    "support": "SUPPORT",
+    "logout": "Logout"
+  }
+}
