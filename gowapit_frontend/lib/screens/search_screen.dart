@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'detail_destinasi_screen.dart';
 import 'kuliner_screen.dart';
 import 'booking_screen.dart';
@@ -34,13 +34,21 @@ class _SearchScreenState extends State<SearchScreen> {
 
       List<Map<String, dynamic>> items = [];
 
-      // 1. Destinasi (Menggunakan API Backend)
+      // 1. Destinasi (Menggunakan Client Cache)
       List<dynamic> apiDestinasi = [];
       try {
-        final destResponse = await http.get(ApiConfig.uri("/api/destinasi"));
-        if (destResponse.statusCode == 200) {
-          final destData = jsonDecode(destResponse.body);
-          apiDestinasi = destData['data'] ?? [];
+        final cached = ApiCache.instance.get("destinasi");
+        if (cached is List && cached.isNotEmpty) {
+          apiDestinasi = cached;
+        } else {
+          final fetched = await ApiCache.instance.getOrFetch(
+            cacheKey: "destinasi",
+            uri: ApiConfig.uri("/api/destinasi"),
+            ttl: ApiCache.destinasiTTL,
+          );
+          if (fetched is List) {
+            apiDestinasi = fetched;
+          }
         }
       } catch (_) {}
 

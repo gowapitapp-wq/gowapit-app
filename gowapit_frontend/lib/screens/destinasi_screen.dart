@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'detail_destinasi_screen.dart'; 
 
 class DestinasiPage extends StatefulWidget {
@@ -21,13 +20,26 @@ class _DestinasiPageState extends State<DestinasiPage> {
     _fetchDestinasiData();
   }
 
-  Future<void> _fetchDestinasiData() async {
+  Future<void> _fetchDestinasiData({bool forceRefresh = false}) async {
     try {
-      final response = await http.get(ApiConfig.uri("/api/destinasi"));
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
+      final cached = ApiCache.instance.get("destinasi");
+      if (cached is List && cached.isNotEmpty && !forceRefresh) {
         setState(() {
-          _listDestinasi = data['data'] ?? [];
+          _listDestinasi = cached;
+          _isLoading = false;
+        });
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "destinasi",
+        uri: ApiConfig.uri("/api/destinasi"),
+        ttl: ApiCache.destinasiTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (data is List && mounted) {
+        setState(() {
+          _listDestinasi = data;
           _isLoading = false;
         });
       } else {

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 
 class HubungiKamiScreen extends StatefulWidget {
   const HubungiKamiScreen({super.key});
@@ -41,23 +42,34 @@ class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
       final prefs = await SharedPreferences.getInstance();
       final String? token = prefs.getString('jwt_token');
       if (token != null) {
-        final response = await http.get(
-          ApiConfig.uri("/api/users/me"),
+        final cached = ApiCache.instance.get("user_profile");
+        if (cached is Map) {
+          _applyPrefill(cached);
+        }
+
+        final data = await ApiCache.instance.getOrFetch(
+          cacheKey: "user_profile",
+          uri: ApiConfig.uri("/api/users/me"),
           headers: {"Authorization": "Bearer $token"},
+          ttl: ApiCache.userProfileTTL,
         );
-        if (response.statusCode == 200 && mounted) {
-          final data = jsonDecode(response.body);
-          setState(() {
-            if (_namaController.text.isEmpty && data['nama_lengkap'] != null) {
-              _namaController.text = data['nama_lengkap'];
-            }
-            if (_emailController.text.isEmpty && data['email'] != null) {
-              _emailController.text = data['email'];
-            }
-          });
+
+        if (data is Map && mounted) {
+          _applyPrefill(data);
         }
       }
     } catch (_) {}
+  }
+
+  void _applyPrefill(Map data) {
+    setState(() {
+      if (_namaController.text.isEmpty && data['nama_lengkap'] != null) {
+        _namaController.text = data['nama_lengkap'];
+      }
+      if (_emailController.text.isEmpty && data['email'] != null) {
+        _emailController.text = data['email'];
+      }
+    });
   }
 
   Future<void> _bukaUrl(String url) async {

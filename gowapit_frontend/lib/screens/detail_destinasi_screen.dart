@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'login_screen.dart';
 
 class DetailDestinasiPage extends StatefulWidget {
@@ -19,25 +20,35 @@ class DetailDestinasiPage extends StatefulWidget {
 }
 
 class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
-  List<dynamic> _ulasanList = [];
-  bool _isLoadingUlasan = true;
-  num _avgRating = 0.0;
-  int _totalUlasan = 0;
-  String? _jwtToken;
-  bool _isLoggedIn = false;
-  String _userRole = "user";
-  Map<String, dynamic>? _myReview;
+  late Map<String, dynamic> _currentData;
+  late List<dynamic> _otherDestinasi;
 
-  // Form state
+  bool _isLoggedIn = false;
+  String? _jwtToken;
+  String? _userRole;
+  String? _userName;
+
+  // Ulasan State
+  bool _isLoadingUlasan = true;
+  List<dynamic> _ulasanList = [];
+  Map<String, dynamic>? _myReview;
+  int _totalUlasan = 0;
+  num _avgRating = 0.0;
+
+  // Form Ulasan
   int _selectedRating = 5;
   final TextEditingController _reviewController = TextEditingController();
   String? _reviewFotoBase64;
   bool _isSubmitting = false;
 
+  int? get _destinasiId => _currentData['id'] is int ? _currentData['id'] : int.tryParse(_currentData['id']?.toString() ?? '');
+
   @override
   void initState() {
     super.initState();
-    _initData();
+    _currentData = widget.data;
+    _updateOtherDestinasi();
+    _checkAuthAndLoad();
   }
 
   @override
@@ -46,45 +57,32 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     super.dispose();
   }
 
-  Future<void> _initData() async {
-    await _checkLoginStatus();
-    await _fetchUlasan();
+  void _updateOtherDestinasi() {
+    final currentId = _destinasiId;
+    _otherDestinasi = widget.allDestinasi.where((item) {
+      final id = item['id'] is int ? item['id'] : int.tryParse(item['id']?.toString() ?? '');
+      return id != currentId;
+    }).toList();
   }
 
-  Future<void> _checkLoginStatus() async {
+  Future<void> _checkAuthAndLoad() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
+    final role = prefs.getString('user_role');
+    final name = prefs.getString('user_nama');
+
     if (mounted) {
       setState(() {
         _jwtToken = token;
+        _userRole = role;
+        _userName = name;
         _isLoggedIn = token != null && token.isNotEmpty;
       });
-    }
-
-    if (token != null && token.isNotEmpty) {
-      try {
-        final res = await http.get(
-          ApiConfig.uri("/api/users/me"),
-          headers: {"Authorization": "Bearer $token"},
-        );
-        if (res.statusCode == 200 && mounted) {
-          final data = jsonDecode(res.body);
-          setState(() {
-            _userRole = data['role'] ?? 'user';
-          });
-        }
-      } catch (_) {}
+      await _fetchUlasan();
     }
   }
 
-  int? get _destinasiId {
-    final rawId = widget.data['id'];
-    if (rawId is int) return rawId;
-    if (rawId is String) return int.tryParse(rawId);
-    return null;
-  }
-
-  Future<void> _fetchUlasan() async {
+  Future<void> _fetchUlasan({bool forceRefresh = false}) async {
     final destId = _destinasiId;
     if (destId == null) {
       if (mounted) setState(() => _isLoadingUlasan = false);
@@ -97,47 +95,57 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
         headers['Authorization'] = 'Bearer $_jwtToken';
       }
 
-      final response = await http.get(
-        ApiConfig.uri("/api/destinasi/$destId/ulasan"),
+      final cacheKey = "ulasan_$destId";
+      final cached = ApiCache.instance.get(cacheKey);
+      if (cached is List && cached.isNotEmpty && !forceRefresh) {
+        _applyUlasanList(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: cacheKey,
+        uri: ApiConfig.uri("/api/destinasi/$destId/ulasan"),
         headers: headers,
+        ttl: ApiCache.ulasanTTL,
+        forceRefresh: forceRefresh,
       );
 
-      if (response.statusCode == 200 && mounted) {
-        final resData = jsonDecode(response.body);
-        final List<dynamic> list = resData['data'] ?? [];
-
-        Map<String, dynamic>? userReview;
-        num sumRating = 0;
-        for (var u in list) {
-          sumRating += (u['rating'] is num) ? u['rating'] : 0;
-          if (u['milik_saya'] == true) {
-            userReview = u;
-          }
-        }
-
-        num avg = list.isNotEmpty ? (sumRating / list.length) : 0.0;
-
-        setState(() {
-          _ulasanList = list;
-          _myReview = userReview;
-          _totalUlasan = list.length;
-          _avgRating = avg;
-          _isLoadingUlasan = false;
-
-          if (userReview != null) {
-            _selectedRating = (userReview['rating'] is num) ? (userReview['rating'] as num).toInt() : 5;
-            _reviewController.text = userReview['ulasan'] ?? '';
-            _reviewFotoBase64 = userReview['foto'];
-          } else {
-            _reviewFotoBase64 = null;
-          }
-        });
+      if (data is List && mounted) {
+        _applyUlasanList(data);
       } else {
         if (mounted) setState(() => _isLoadingUlasan = false);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingUlasan = false);
     }
+  }
+
+  void _applyUlasanList(List<dynamic> list) {
+    Map<String, dynamic>? userReview;
+    num sumRating = 0;
+    for (var u in list) {
+      sumRating += (u['rating'] is num) ? u['rating'] : 0;
+      if (u['milik_saya'] == true) {
+        userReview = u;
+      }
+    }
+
+    num avg = list.isNotEmpty ? (sumRating / list.length) : 0.0;
+
+    setState(() {
+      _ulasanList = list;
+      _myReview = userReview;
+      _totalUlasan = list.length;
+      _avgRating = avg;
+      _isLoadingUlasan = false;
+
+      if (userReview != null) {
+        _selectedRating = (userReview['rating'] is num) ? (userReview['rating'] as num).toInt() : 5;
+        _reviewController.text = userReview['ulasan'] ?? '';
+        _reviewFotoBase64 = userReview['foto'];
+      } else {
+        _reviewFotoBase64 = null;
+      }
+    });
   }
 
   Future<void> _pickReviewImage(ImageSource source) async {
@@ -342,7 +350,9 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(res['message'] ?? "Ulasan berhasil disimpan!")),
           );
-          await _fetchUlasan();
+          ApiCache.instance.invalidate("ulasan_$destId");
+          ApiCache.instance.invalidate("destinasi");
+          await _fetchUlasan(forceRefresh: true);
         } else {
           final res = jsonDecode(response.body);
           final msg = ApiConfig.extractErrorMessage(res['detail'], fallback: "Gagal menyimpan ulasan");
@@ -405,7 +415,9 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
           _reviewFotoBase64 = null;
           _selectedRating = 5;
           _myReview = null;
-          await _fetchUlasan();
+          ApiCache.instance.invalidate("ulasan_$destId");
+          ApiCache.instance.invalidate("destinasi");
+          await _fetchUlasan(forceRefresh: true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Gagal menghapus ulasan."), backgroundColor: Colors.red),
@@ -746,8 +758,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
             ElevatedButton(
               onPressed: () async {
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-                await _checkLoginStatus();
-                await _fetchUlasan();
+                await _checkAuthAndLoad();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,

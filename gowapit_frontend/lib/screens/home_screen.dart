@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:async'; // Diperlukan untuk Timer Carousel
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'cuaca_screen.dart';
 import 'destinasi_screen.dart';
 import 'detail_destinasi_screen.dart';
@@ -73,24 +74,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
     super.dispose();
   }
 
-  // --- API DESTINASI POPULER LOGIC ---
-  Future<void> _fetchDestinasiData() async {
+  // --- API DESTINASI POPULER LOGIC WITH CLIENT CACHE ---
+  Future<void> _fetchDestinasiData({bool forceRefresh = false}) async {
     try {
-      final response = await http.get(ApiConfig.uri("/api/destinasi"));
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> list = data['data'] ?? [];
-        _allDestinasi = list;
-        List<dynamic> sorted = List.from(list);
-        sorted.sort((a, b) {
-          num ratingA = (a['rating'] is num) ? a['rating'] : 0;
-          num ratingB = (b['rating'] is num) ? b['rating'] : 0;
-          return ratingB.compareTo(ratingA);
-        });
-        setState(() {
-          _popularDestinasi = sorted.take(4).toList();
-          _isLoadingDestinasi = false;
-        });
+      final cached = ApiCache.instance.get("destinasi");
+      if (cached is List && cached.isNotEmpty && !forceRefresh) {
+        _applyDestinasiData(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "destinasi",
+        uri: ApiConfig.uri("/api/destinasi"),
+        ttl: ApiCache.destinasiTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (data is List && mounted) {
+        _applyDestinasiData(data);
       } else {
         if (mounted) setState(() => _isLoadingDestinasi = false);
       }
@@ -99,38 +99,61 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  // --- API USER LOGIC ---
-  Future<void> _fetchUserData() async {
+  void _applyDestinasiData(List<dynamic> list) {
+    _allDestinasi = list;
+    List<dynamic> sorted = List.from(list);
+    sorted.sort((a, b) {
+      num ratingA = (a['rating'] is num) ? a['rating'] : 0;
+      num ratingB = (b['rating'] is num) ? b['rating'] : 0;
+      return ratingB.compareTo(ratingA);
+    });
+    setState(() {
+      _popularDestinasi = sorted.take(4).toList();
+      _isLoadingDestinasi = false;
+    });
+  }
+
+  // --- API USER LOGIC WITH CLIENT CACHE ---
+  Future<void> _fetchUserData({bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
     if (token == null) {
-      setState(() => _namaPengguna = "Petualang");
+      if (mounted) setState(() => _namaPengguna = "Petualang");
       return;
     }
 
     try {
-      final response = await http.get(
-        ApiConfig.uri("/api/users/me"),
-        headers: {
-          "Authorization": "Bearer $token",
-        },
+      final cached = ApiCache.instance.get("user_profile");
+      if (cached is Map && !forceRefresh) {
+        _applyUserData(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "user_profile",
+        uri: ApiConfig.uri("/api/users/me"),
+        headers: {"Authorization": "Bearer $token"},
+        ttl: ApiCache.userProfileTTL,
+        forceRefresh: forceRefresh,
       );
 
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          String namaLengkap = data['nama_lengkap'] ?? 'Petualang';
-          _namaPengguna = namaLengkap.split(' ')[0];
-          _email = data['email'] ?? '';
-          _fotoProfil = data['foto_profil'] ?? '';
-        });
+      if (data is Map && mounted) {
+        _applyUserData(data);
       } else {
-        setState(() => _namaPengguna = "Petualang");
+        if (mounted) setState(() => _namaPengguna = "Petualang");
       }
     } catch (e) {
-      setState(() => _namaPengguna = "Petualang");
+      if (mounted) setState(() => _namaPengguna = "Petualang");
     }
+  }
+
+  void _applyUserData(Map data) {
+    setState(() {
+      String namaLengkap = data['nama_lengkap'] ?? 'Petualang';
+      _namaPengguna = namaLengkap.split(' ')[0];
+      _email = data['email'] ?? '';
+      _fotoProfil = data['foto_profil'] ?? '';
+    });
   }
 
   ImageProvider? _getAvatarImageProvider() {
@@ -156,28 +179,43 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return "https://www.gravatar.com/avatar/$md5Hash?d=identicon&s=200";
   }
 
-  // --- API CUACA LOGIC ---
-  Future<void> _fetchWeatherData() async {
+  // --- API CUACA LOGIC WITH CLIENT CACHE ---
+  Future<void> _fetchWeatherData({bool forceRefresh = false}) async {
     const String apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=-7.2558&longitude=110.0183&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,rain,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation,rain,apparent_temperature,precipitation_probability,weather_code,wind_speed_80m,wind_direction_10m,wind_gusts_10m,temperature_80m,uv_index_clear_sky,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_clear_sky_max&timezone=auto";
     try {
-      final response = await http.get(Uri.parse(apiUrl));
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
-        final current = data['current'];
-        int code = (current['weather_code'] as num).toInt();
-        int isDay = (current['is_day'] as num).toInt();
-        setState(() {
-          _currentTemp = "${(current['temperature_2m'] as num).round()}°C";
-          _feelsLike = "${(current['apparent_temperature'] as num).round()}°C";
-          _weatherDesc = _getWeatherDescription(code);
-          _weatherIcon = _getWeatherIcon(code, isDay == 1);
-          _weatherLottie = _getWeatherLottie(code);
-          _isLoadingWeather = false;
-        });
+      final cached = ApiCache.instance.get("weather_open_meteo");
+      if (cached is Map && !forceRefresh) {
+        _applyWeatherData(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "weather_open_meteo",
+        uri: Uri.parse(apiUrl),
+        ttl: ApiCache.weatherTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (data is Map && mounted) {
+        _applyWeatherData(data);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingWeather = false);
     }
+  }
+
+  void _applyWeatherData(Map data) {
+    final current = data['current'];
+    if (current == null) return;
+    int code = (current['weather_code'] as num).toInt();
+    int isDay = (current['is_day'] as num).toInt();
+    setState(() {
+      _currentTemp = "${(current['temperature_2m'] as num).round()}°C";
+      _feelsLike = "${(current['apparent_temperature'] as num).round()}°C";
+      _weatherDesc = _getWeatherDescription(code);
+      _weatherIcon = _getWeatherIcon(code, isDay == 1);
+      _weatherLottie = _getWeatherLottie(code);
+      _isLoadingWeather = false;
+    });
   }
 
   String _getWeatherDescription(int code) {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'booking_screen.dart';
 
 class PaketPage extends StatefulWidget {
@@ -22,19 +21,34 @@ class _PaketPageState extends State<PaketPage> {
     _fetchPaketData();
   }
 
-  Future<void> _fetchPaketData() async {
+  Future<void> _fetchPaketData({bool forceRefresh = false}) async {
     try {
-      final response = await http.get(ApiConfig.uri('/api/paket'));
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      final cached = ApiCache.instance.get("paket");
+      if (cached is List && cached.isNotEmpty && !forceRefresh) {
         setState(() {
-          _listPaket = data['data'] ?? [];
+          _listPaket = cached;
           _isLoading = false;
+          _error = null;
+        });
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "paket",
+        uri: ApiConfig.uri('/api/paket'),
+        ttl: ApiCache.paketTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (!mounted) return;
+      if (data is List) {
+        setState(() {
+          _listPaket = data;
+          _isLoading = false;
+          _error = null;
         });
       } else {
         setState(() {
-          _error = 'Gagal memuat data paket (${response.statusCode})';
+          _error = 'Gagal memuat data paket';
           _isLoading = false;
         });
       }

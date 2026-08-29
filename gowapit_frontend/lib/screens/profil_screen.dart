@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'faq_screen.dart';
 import 'terms_privacy_screen.dart';
 import 'hubungi_kami_screen.dart';
@@ -39,7 +40,7 @@ class _ProfilPageState extends State<ProfilPage> {
     _fetchUserData();
   }
 
-  Future<void> _fetchUserData() async {
+  Future<void> _fetchUserData({bool forceRefresh = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? token = prefs.getString('jwt_token');
@@ -47,40 +48,55 @@ class _ProfilPageState extends State<ProfilPage> {
         if (mounted) setState(() => _isLoading = false);
         return;
       }
-      final response = await http.get(
-        ApiConfig.uri("/api/users/me"),
-        headers: {"Authorization": "Bearer $token"},
-      );
-      if (response.statusCode == 200 && mounted) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _namaLengkap = data['nama_lengkap'] ?? 'Petualang Wapit';
-          _email = data['email'] ?? 'email@tidak.ditemukan';
-          _fotoProfil = data['foto_profil'] ?? '';
-          _referralCode = data['referral_code'] ?? 'WAPIT-0000';
-          _role = data['role'] ?? 'user';
-          _referredBy = data['referred_by'];
-          _isLoading = false;
-        });
 
-        // Fetch voucher count
-        try {
-          final vRes = await http.get(
-            ApiConfig.uri("/api/user/vouchers"),
-            headers: {"Authorization": "Bearer $token"},
-          );
-          if (vRes.statusCode == 200 && mounted) {
-            final vData = jsonDecode(vRes.body)['data'] as List?;
-            final available = (vData ?? []).where((v) => v['status'] == 'tersedia').length;
-            setState(() => _voucherCount = available);
-          }
-        } catch (_) {}
+      final cached = ApiCache.instance.get("user_profile");
+      if (cached is Map && !forceRefresh) {
+        _applyUserData(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "user_profile",
+        uri: ApiConfig.uri("/api/users/me"),
+        headers: {"Authorization": "Bearer $token"},
+        ttl: ApiCache.userProfileTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (data is Map && mounted) {
+        _applyUserData(data);
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
+
+      // Fetch voucher count
+      try {
+        final vData = await ApiCache.instance.getOrFetch(
+          cacheKey: "user_vouchers",
+          uri: ApiConfig.uri("/api/user/vouchers"),
+          headers: {"Authorization": "Bearer $token"},
+          ttl: ApiCache.userVouchersTTL,
+          forceRefresh: forceRefresh,
+        );
+        if (vData is List && mounted) {
+          final available = vData.where((v) => v['status'] == 'tersedia').length;
+          setState(() => _voucherCount = available);
+        }
+      } catch (_) {}
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _applyUserData(Map data) {
+    setState(() {
+      _namaLengkap = data['nama_lengkap'] ?? 'Petualang Wapit';
+      _email = data['email'] ?? 'email@tidak.ditemukan';
+      _fotoProfil = data['foto_profil'] ?? '';
+      _referralCode = data['referral_code'] ?? 'WAPIT-0000';
+      _role = data['role'] ?? 'user';
+      _referredBy = data['referred_by'];
+      _isLoading = false;
+    });
   }
 
   Future<void> _updateProfile(String newName, String newPhotoBase64) async {
@@ -104,6 +120,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
+        ApiCache.instance.invalidate("user_profile");
         setState(() {
           _namaLengkap = data['user']['nama_lengkap'] ?? newName;
           _fotoProfil = data['user']['foto_profil'] ?? newPhotoBase64;

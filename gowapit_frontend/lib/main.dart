@@ -11,10 +11,12 @@ import 'screens/home_screen.dart';
 import 'screens/tiket_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'widgets/floating_dock.dart';
+import 'config/api_cache.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await ApiCache.instance.init();
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
@@ -257,7 +259,10 @@ class _MainNavigatorState extends State<MainNavigator> {
     return Scaffold(
       backgroundColor: Colors.transparent, // Biarkan gradien belakang menembus
       extendBody: true,
-      body: _pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
 
       // Floating Animated Dock Navigation
       bottomNavigationBar: SafeArea(

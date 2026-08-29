@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import 'tiket_screen.dart';
 import 'login_screen.dart';
 
@@ -118,14 +119,34 @@ class _BookingScreenState extends State<BookingScreen> {
     super.dispose();
   }
 
-  // ── Fetch Paket ───────────────────────────────────────────────
+  // ── Fetch Paket with ApiCache ────────────────────────────────
   Future<void> _fetchPaket() async {
     try {
-      final res = await http.get(ApiConfig.uri('/api/paket'));
+      final cached = ApiCache.instance.get("paket");
+      if (cached is List && cached.isNotEmpty) {
+        final list = cached.map((e) => Map<String, dynamic>.from(e)).toList();
+        setState(() {
+          _paketList = list;
+          _loadingPaket = false;
+          if (widget.paket != null) {
+            _selectedPaket = list.firstWhere(
+              (p) => p['id'] == widget.paket!['id'],
+              orElse: () => list.first,
+            );
+          }
+        });
+        if (_selectedPaket != null) _fetchSlot();
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "paket",
+        uri: ApiConfig.uri('/api/paket'),
+        ttl: ApiCache.paketTTL,
+      );
+
       if (!mounted) return;
-      if (res.statusCode == 200) {
-        final List<dynamic> raw = jsonDecode(res.body)['data'] ?? [];
-        final list = raw.map((e) => Map<String, dynamic>.from(e)).toList();
+      if (data is List) {
+        final list = data.map((e) => Map<String, dynamic>.from(e)).toList();
         setState(() {
           _paketList = list;
           _loadingPaket = false;
@@ -145,20 +166,33 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  // ── Fetch Slot ────────────────────────────────────────────────
+  // ── Fetch Slot with ApiCache ─────────────────────────────────
   Future<void> _fetchSlot() async {
     if (_selectedPaket == null) return;
     setState(() { _loadingSlot = true; _slotMap = {}; });
     try {
       final start = _fmtDate(_calendarStart);
-      // Fetch 180 hari ke depan (6 bulan)
       final end = _fmtDate(_calendarStart.add(const Duration(days: 180)));
       final id = _selectedPaket!['id'];
-      final res = await http.get(ApiConfig.uri('/api/paket/$id/slot?start=$start&end=$end'));
-      if (res.statusCode == 200 && mounted) {
-        final Map<String, dynamic> raw = jsonDecode(res.body)['data'] ?? {};
+      final cacheKey = "slot_${id}_${start}_$end";
+
+      final cached = ApiCache.instance.get(cacheKey);
+      if (cached is Map) {
         setState(() {
-          _slotMap = raw.map((k, v) => MapEntry(k, (v as num).toInt()));
+          _slotMap = cached.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+          _loadingSlot = false;
+        });
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: cacheKey,
+        uri: ApiConfig.uri('/api/paket/$id/slot?start=$start&end=$end'),
+        ttl: ApiCache.slotTTL,
+      );
+
+      if (data is Map && mounted) {
+        setState(() {
+          _slotMap = data.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
           _loadingSlot = false;
         });
       } else {
@@ -248,6 +282,8 @@ class _BookingScreenState extends State<BookingScreen> {
           'qty': 1,
         });
         globalCart.value = currentList;
+        ApiCache.instance.invalidate("slot_");
+        ApiCache.instance.invalidate("user_vouchers");
         if (mounted) {
           Navigator.pop(context, 'success');
           ScaffoldMessenger.of(context).showSnackBar(

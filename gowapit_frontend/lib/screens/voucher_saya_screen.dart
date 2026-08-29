@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 
 class VoucherSayaScreen extends StatefulWidget {
   const VoucherSayaScreen({super.key});
@@ -30,8 +31,7 @@ class _VoucherSayaScreenState extends State<VoucherSayaScreen> with SingleTicker
     super.dispose();
   }
 
-  Future<void> _fetchVouchers() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchVouchers({bool forceRefresh = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? token = prefs.getString('jwt_token');
@@ -41,18 +41,28 @@ class _VoucherSayaScreenState extends State<VoucherSayaScreen> with SingleTicker
         return;
       }
 
-      final response = await http.get(
-        ApiConfig.uri("/api/user/vouchers"),
+      final cached = ApiCache.instance.get("user_vouchers");
+      if (cached is List && cached.isNotEmpty && !forceRefresh) {
+        setState(() {
+          _allVouchers = cached;
+          _isLoading = false;
+        });
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "user_vouchers",
+        uri: ApiConfig.uri("/api/user/vouchers"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
         },
+        ttl: ApiCache.userVouchersTTL,
+        forceRefresh: forceRefresh,
       );
 
-      if (response.statusCode == 200 && mounted) {
-        final resData = jsonDecode(response.body);
+      if (data is List && mounted) {
         setState(() {
-          _allVouchers = resData['data'] ?? [];
+          _allVouchers = data;
           _isLoading = false;
         });
       } else {

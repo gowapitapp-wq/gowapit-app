@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import '../config/api_cache.dart';
 import '../theme_notifier.dart';
 import 'login_screen.dart';
 
@@ -110,13 +111,22 @@ class _ScannerScreenState extends State<ScannerScreen>
       final token = prefs.getString('jwt_token');
       if (token == null || token.isEmpty) return;
 
-      final res = await http.get(
-        ApiConfig.uri('/api/users/me'),
+      final cached = ApiCache.instance.get("user_profile");
+      if (cached is Map) {
+        setState(() {
+          _staffName = cached['nama_lengkap'] ?? _staffName;
+          _staffEmail = cached['email'] ?? _staffEmail;
+        });
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "user_profile",
+        uri: ApiConfig.uri('/api/users/me'),
         headers: {'Authorization': 'Bearer $token'},
+        ttl: ApiCache.userProfileTTL,
       );
 
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
+      if (data is Map && mounted) {
         setState(() {
           _staffName = data['nama_lengkap'] ?? _staffName;
           _staffEmail = data['email'] ?? _staffEmail;

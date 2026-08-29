@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
-import 'dart:convert';
+import '../config/api_cache.dart';
 
 class CuacaScreen extends StatefulWidget {
   const CuacaScreen({super.key});
@@ -21,39 +20,54 @@ class _CuacaScreenState extends State<CuacaScreen> {
     _fetchWeatherData();
   }
 
-  Future<void> _fetchWeatherData() async {
+  Future<void> _fetchWeatherData({bool forceRefresh = false}) async {
     final url = Uri.parse(
         'https://api.open-meteo.com/v1/forecast?latitude=-7.2558&longitude=110.0183&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,rain,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation,rain,apparent_temperature,precipitation_probability,weather_code,wind_speed_80m,wind_direction_10m,wind_gusts_10m,temperature_80m,uv_index_clear_sky,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_clear_sky_max&timezone=auto'
     );
 
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (mounted) {
-          setState(() {
-            _currentWeather = data['current'];
-            final dailyData = data['daily'];
-            _dailyWeather = List.generate(7, (index) {
-              return {
-                'time': dailyData['time'][index],
-                'weather_code': dailyData['weather_code'][index],
-                'temp_max': dailyData['temperature_2m_max'][index],
-                'temp_min': dailyData['temperature_2m_min'][index],
-                'precip_prob': dailyData['precipitation_probability_max'][index],
-                'sunrise': dailyData['sunrise'][index],
-                'sunset': dailyData['sunset'][index],
-                'uv_index': dailyData['uv_index_clear_sky_max'][index],
-              };
-            });
-            _isLoading = false;
-          });
-        }
+      final cached = ApiCache.instance.get("weather_open_meteo");
+      if (cached is Map && !forceRefresh) {
+        _applyWeatherData(cached);
+      }
+
+      final data = await ApiCache.instance.getOrFetch(
+        cacheKey: "weather_open_meteo",
+        uri: url,
+        ttl: ApiCache.weatherTTL,
+        forceRefresh: forceRefresh,
+      );
+
+      if (data is Map && mounted) {
+        _applyWeatherData(data);
       }
     } catch (e) {
       debugPrint("Gagal memuat cuaca: $e");
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _applyWeatherData(Map data) {
+    setState(() {
+      _currentWeather = Map<String, dynamic>.from(data['current'] ?? {});
+      final dailyData = data['daily'];
+      if (dailyData != null && dailyData['time'] is List) {
+        final count = (dailyData['time'] as List).length;
+        _dailyWeather = List.generate(count > 7 ? 7 : count, (index) {
+          return {
+            'time': dailyData['time'][index],
+            'weather_code': dailyData['weather_code'][index],
+            'temp_max': dailyData['temperature_2m_max'][index],
+            'temp_min': dailyData['temperature_2m_min'][index],
+            'precip_prob': dailyData['precipitation_probability_max'][index],
+            'sunrise': dailyData['sunrise'][index],
+            'sunset': dailyData['sunset'][index],
+            'uv_index': dailyData['uv_index_clear_sky_max'][index],
+          };
+        });
+      }
+      _isLoading = false;
+    });
   }
 
   // --- KAMUS CUACA (DENGAN ANIMASI LOTTIE JSON) ---
