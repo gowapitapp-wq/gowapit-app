@@ -1,13 +1,25 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// Konfigurasi URL Server API Backend Go Wapit Terpusat
 class ApiConfig {
   /// Base URL Default untuk Backend:
-  /// - Untuk Android Emulator: "http://10.0.2.2:8000"
-  /// - Untuk HP Android Fisik via Wi-Fi: "http://<IP_LAPTOP_ANDA>:8000" (contoh: "http://192.168.1.5:8000")
-  /// - Untuk Server Production (IDCloudHost VPS Jakarta): "http://157.10.161.228"
-  static String _overrideBaseUrl = "http://157.10.161.228";
+  /// - Untuk Web (Vercel/Browser): otomatis menggunakan origin saat ini (HTTPS)
+  /// - Untuk Mobile/Emulator: "http://157.10.161.228"
+  static String _overrideBaseUrl = "";
 
   /// Mengambil Base URL aktif
-  static String get baseUrl => _overrideBaseUrl;
+  static String get baseUrl {
+    if (_overrideBaseUrl.isNotEmpty) return _overrideBaseUrl;
+    if (kIsWeb) {
+      try {
+        final origin = Uri.base.origin;
+        if (origin.isNotEmpty && !origin.startsWith("file://")) {
+          return origin;
+        }
+      } catch (_) {}
+    }
+    return "http://157.10.161.228";
+  }
 
   /// Mengubah Base URL secara dinamis jika diperlukan
   static void setBaseUrl(String newUrl) {

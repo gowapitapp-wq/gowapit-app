@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://157.10.161.228/api/:path*"
+    },
+    {
+      "source": "/docs",
+      "destination": "http://157.10.161.228/docs"
+    },
+    {
+      "source": "/openapi.json",
+      "destination": "http://157.10.161.228/openapi.json"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
+  ]
+}
