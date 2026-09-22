@@ -9,7 +9,6 @@ class FaqPage extends StatelessWidget {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // 2. Tentukan palet warna adaptif
-    final Color bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F7F5);
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : Colors.black87;
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : Colors.black54;

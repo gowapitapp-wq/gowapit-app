@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../auth/auth_service.dart';
 
 class VoucherSayaScreen extends StatefulWidget {
   const VoucherSayaScreen({super.key});
@@ -33,8 +31,7 @@ class _VoucherSayaScreenState extends State<VoucherSayaScreen> with SingleTicker
 
   Future<void> _fetchVouchers({bool forceRefresh = false}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await AuthService.instance.getToken();
 
       if (token == null) {
         if (mounted) setState(() => _isLoading = false);

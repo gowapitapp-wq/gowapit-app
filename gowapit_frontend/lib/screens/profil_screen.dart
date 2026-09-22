@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../auth/auth_service.dart';
 import 'faq_screen.dart';
 import 'terms_privacy_screen.dart';
 import 'hubungi_kami_screen.dart';
@@ -15,6 +14,7 @@ import 'voucher_saya_screen.dart';
 import 'admin_panel_screen.dart';
 import 'login_screen.dart';
 import '../theme_notifier.dart';
+import '../design/tokens.dart';
 
 class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
@@ -42,8 +42,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
   Future<void> _fetchUserData({bool forceRefresh = false}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await AuthService.instance.getToken();
       if (token == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
@@ -102,8 +101,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Future<void> _updateProfile(String newName, String newPhotoBase64) async {
     setState(() => _isSaving = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await AuthService.instance.getToken();
       if (token == null) return;
 
       final response = await http.put(
@@ -209,7 +207,7 @@ class _ProfilPageState extends State<ProfilPage> {
                 children: [
                   Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
                   const SizedBox(height: 16),
-                  Text("Edit Profil", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
+                  Text("Edit Profil", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: AppTokens.fontFamily)),
                   const SizedBox(height: 20),
 
                   // Avatar Picker Preview
@@ -222,7 +220,10 @@ class _ProfilPageState extends State<ProfilPage> {
                           radius: 45,
                           backgroundColor: primaryColor.withValues(alpha: 0.2),
                           backgroundImage: _getAvatarImageProvider(),
-                          child: _fotoProfil.isEmpty ? Icon(Icons.person, size: 45, color: primaryColor) : null,
+                          child: Text(
+                            _getInitials(_namaLengkap),
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily),
+                          ),
                         ),
                         CircleAvatar(
                           radius: 14,
@@ -313,6 +314,24 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
+  String _dapatkanUrlAvatarEmail(String email, [String? name]) {
+    String identifier = (name != null && name.isNotEmpty && name != "Memuat...")
+        ? name
+        : (email.isNotEmpty && !email.contains("Memuat") ? email.split('@')[0] : 'Go Wapit');
+    return "https://ui-avatars.com/api/?name=${Uri.encodeComponent(identifier)}&background=1E524D&color=ffffff&size=256&bold=true";
+  }
+
+  String _getInitials(String text) {
+    if (text.isEmpty || text.contains("Memuat")) return "GW";
+    List<String> parts = text.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return "${parts[0][0]}${parts[1][0]}".toUpperCase();
+    }
+    String clean = text.split('@')[0];
+    if (clean.length >= 2) return clean.substring(0, 2).toUpperCase();
+    return clean.substring(0, 1).toUpperCase();
+  }
+
   ImageProvider? _getAvatarImageProvider() {
     if (_fotoProfil.isNotEmpty) {
       if (_fotoProfil.startsWith("data:image")) {
@@ -324,18 +343,19 @@ class _ProfilPageState extends State<ProfilPage> {
         return NetworkImage(_fotoProfil);
       }
     }
-    return NetworkImage(_dapatkanUrlGravatar(_email));
-  }
+    
+    // 1. Fallback ke photoURL akun Google / Firebase jika tersedia
+    final fbPhoto = AuthService.instance.currentUser?.photoURL;
+    if (fbPhoto != null && fbPhoto.isNotEmpty) {
+      return NetworkImage(fbPhoto);
+    }
 
-  String _dapatkanUrlGravatar(String email) {
-    String cleanEmail = email.trim().toLowerCase();
-    String md5Hash = md5.convert(utf8.encode(cleanEmail)).toString();
-    return "https://www.gravatar.com/avatar/$md5Hash?d=identicon&s=200";
+    // 2. Fallback avatar beresolusi tinggi yang dihasilkan dari email / nama user
+    return NetworkImage(_dapatkanUrlAvatarEmail(_email, _namaLengkap));
   }
 
   Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
+    await AuthService.instance.signOut();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
@@ -373,9 +393,13 @@ class _ProfilPageState extends State<ProfilPage> {
           child: CircleAvatar(
             backgroundColor: primaryColor.withValues(alpha: 0.2),
             backgroundImage: _getAvatarImageProvider(),
+            child: Text(
+              _getInitials(_namaLengkap),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily),
+            ),
           ),
         ),
-        title: Text("Go Wapit", style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 22, fontFamily: 'Montserrat')),
+        title: Text("Go Wapit", style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 22, fontFamily: AppTokens.fontFamily)),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: primaryColor))
@@ -405,8 +429,12 @@ class _ProfilPageState extends State<ProfilPage> {
                                 decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 3)),
                                 child: CircleAvatar(
                                   radius: 45,
-                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundColor: primaryColor.withValues(alpha: 0.15),
                                   backgroundImage: _getAvatarImageProvider(),
+                                  child: Text(
+                                    _getInitials(_namaLengkap),
+                                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily),
+                                  ),
                                 ),
                               ),
                               Container(
@@ -421,7 +449,7 @@ class _ProfilPageState extends State<ProfilPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(_namaLengkap, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')),
+                            Text(_namaLengkap, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily)),
                             const SizedBox(width: 6),
                             IconButton(
                               icon: Icon(Icons.edit_outlined, size: 18, color: primaryColor),
@@ -448,9 +476,9 @@ class _ProfilPageState extends State<ProfilPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: 'Montserrat')),
+                                Text("KODE REFERRAL ANDA", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 1.1, fontFamily: AppTokens.fontFamily)),
                                 const SizedBox(height: 4),
-                                Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: 'Montserrat')),
+                                Text(_referralCode, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor, letterSpacing: 1.5, fontFamily: AppTokens.fontFamily)),
                               ],
                             ),
                             IconButton(
@@ -588,7 +616,7 @@ class _ProfilPageState extends State<ProfilPage> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
                       child: const Center(
-                        child: Text("Keluar Akun", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Montserrat')),
+                        child: Text("Keluar Akun", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15, fontFamily: AppTokens.fontFamily)),
                       ),
                     ),
                   ),
@@ -601,7 +629,7 @@ class _ProfilPageState extends State<ProfilPage> {
   Widget _buildSectionHeader(String title, Color color) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color, letterSpacing: 1.2, fontFamily: 'Montserrat')),
+      child: Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color, letterSpacing: 1.2, fontFamily: AppTokens.fontFamily)),
     );
   }
 
@@ -684,7 +712,7 @@ class _ProfilPageState extends State<ProfilPage> {
                   Text(
                     "Klaim Kode Referral Teman",
                     style: TextStyle(
-                      fontFamily: 'Montserrat',
+                      fontFamily: AppTokens.fontFamily,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: textColor,
@@ -724,8 +752,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
                               setModalState(() => isSubmitting = true);
                               try {
-                                final prefs = await SharedPreferences.getInstance();
-                                final token = prefs.getString('jwt_token');
+                                final token = await AuthService.instance.getToken();
 
                                 final res = await http.post(
                                   ApiConfig.uri("/api/referral/use"),

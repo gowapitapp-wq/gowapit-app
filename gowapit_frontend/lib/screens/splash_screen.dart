@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
+import 'scanner_screen.dart';
 import '../main.dart';
+import '../auth/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,18 +22,30 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkLoginSession() async {
+    final user = AuthService.instance.currentUser;
+    String? role;
+    if (user != null) {
+      final syncRes = await AuthService.instance.ensureBackendSynced();
+      role = syncRes.role;
+    }
     final prefs = await SharedPreferences.getInstance();
-    final String? token = prefs.getString('jwt_token');
+    role = role ?? prefs.getString('user_role');
     final bool onboardingDone = prefs.getBool('onboarding_done') ?? false;
 
-    Timer(const Duration(milliseconds: 2000), () {
+    Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-      if (token != null && token.isNotEmpty) {
-        // Langsung ke Home Dashboard jika sudah login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigator()),
-        );
+      if (AuthService.instance.currentUser != null) {
+        if (role == 'petugas' || role == 'staff') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigator()),
+          );
+        }
       } else if (!onboardingDone) {
         // Ke halaman Onboarding jika belum pernah menyelesaikan onboarding
         Navigator.pushReplacement(

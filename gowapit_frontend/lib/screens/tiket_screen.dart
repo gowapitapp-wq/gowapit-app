@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../auth/auth_service.dart';
+import '../design/tokens.dart';
 
 // ============================================================================
 // STATE KERANJANG & RIWAYAT GLOBAL
@@ -35,7 +37,7 @@ class _TiketPageState extends State<TiketPage> {
   Future<void> _fetchMyTickets() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
       
       // 1. Muat data dari Cache Lokal terlebih dahulu (agar instan/offline ready)
       final String? cachedJson = prefs.getString('cached_user_tickets_json');
@@ -75,8 +77,7 @@ class _TiketPageState extends State<TiketPage> {
 
   Future<void> _fetchPendingBookings() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
       if (token == null || token.isEmpty) return;
 
       final res = await http.get(
@@ -149,7 +150,7 @@ class _TiketPageState extends State<TiketPage> {
             children: [
               Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
-              Text("Pilih Metode Pembayaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
+              Text("Pilih Metode Pembayaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: AppTokens.fontFamily)),
               const SizedBox(height: 8),
               Text("Total Pembayaran: ${formatRupiah(grandTotal)}", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: primaryColor)),
               const SizedBox(height: 20),
@@ -192,8 +193,7 @@ class _TiketPageState extends State<TiketPage> {
     setState(() => _isPaying = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
       final currentCart = List<Map<String, dynamic>>.from(globalCart.value);
       final currentRiwayat = List<Map<String, dynamic>>.from(globalRiwayat.value);
       String generatedOrderId = "INV/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
@@ -385,7 +385,7 @@ class _TiketPageState extends State<TiketPage> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Text("Keranjang", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Montserrat')),
+        title: Text("Keranjang", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: AppTokens.fontFamily)),
       ),
       body: Column(
         children: [
@@ -442,7 +442,7 @@ class _TiketPageState extends State<TiketPage> {
               children: [
                 Icon(Icons.shopping_cart_outlined, size: 80, color: primaryColor.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
-                Text("Keranjangmu masih kosong", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
+                Text("Keranjangmu masih kosong", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: AppTokens.fontFamily)),
                 const SizedBox(height: 8),
                 Text("Yuk, eksplorasi destinasi dan menu lezat!", style: TextStyle(color: subTextColor, fontFamily: 'Inter')),
               ],
@@ -514,7 +514,7 @@ class _TiketPageState extends State<TiketPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Total Bayar", style: TextStyle(fontSize: 12, color: subTextColor)),
-                      Text(formatRupiah(grandTotal), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')),
+                      Text(formatRupiah(grandTotal), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily)),
                     ],
                   ),
                   ElevatedButton(
@@ -666,8 +666,7 @@ class _TiketPageState extends State<TiketPage> {
                       onTap: () async {
                         // Jika item paket dengan booking_id, batalkan ke backend
                         if (isPaket && item['booking_id'] != null) {
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('jwt_token');
+                          final token = await AuthService.instance.getToken();
                           if (token != null) {
                             try {
                               await http.delete(
@@ -686,7 +685,7 @@ class _TiketPageState extends State<TiketPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(item['nama'] ?? '-', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: textColor, fontFamily: 'Montserrat'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(item['nama'] ?? '-', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: textColor, fontFamily: AppTokens.fontFamily), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
 
                 // Subtitle / Info Detail
@@ -838,7 +837,7 @@ class BerhasilTicketCard extends StatelessWidget {
                   // Header
                   Text(
                     "E-Tiket Go Wapit", 
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat'),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: AppTokens.fontFamily),
                   ),
                   const SizedBox(height: 14),
                   
@@ -1040,7 +1039,7 @@ class BerhasilTicketCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         data['nama'] ?? '-', 
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat'),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor, fontFamily: AppTokens.fontFamily),
                         maxLines: 2, 
                         overflow: TextOverflow.ellipsis,
                       ),

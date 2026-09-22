@@ -113,7 +113,6 @@ class _CuacaScreenState extends State<CuacaScreen> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    final Color bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
     final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);

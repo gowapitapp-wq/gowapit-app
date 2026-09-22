@@ -14,6 +14,11 @@ class ApiConfig {
       try {
         final origin = Uri.base.origin;
         if (origin.isNotEmpty && !origin.startsWith("file://")) {
+          // Jika berjalan di localhost/127.0.0.1 (Flutter Web Dev server),
+          // arahkan ke backend FastAPI lokal port 8000 agar tidak 404
+          if (origin.contains("localhost") || origin.contains("127.0.0.1")) {
+            return "http://127.0.0.1:8000";
+          }
           return origin;
         }
       } catch (_) {}

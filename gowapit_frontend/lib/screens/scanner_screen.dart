@@ -3,10 +3,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
 import '../theme_notifier.dart';
+import '../auth/auth_service.dart';
 import 'login_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -107,8 +107,7 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   Future<void> _loadStaffProfile() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
       if (token == null || token.isEmpty) return;
 
       final cached = ApiCache.instance.get("user_profile");
@@ -189,8 +188,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isLoading = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
 
       final headers = {'Content-Type': 'application/json'};
       if (token != null && token.isNotEmpty) {
@@ -487,9 +485,7 @@ class _ScannerScreenState extends State<ScannerScreen>
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('jwt_token');
-              await prefs.remove('user_role');
+              await AuthService.instance.signOut();
               if (mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,

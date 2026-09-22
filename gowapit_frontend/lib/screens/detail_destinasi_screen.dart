@@ -5,9 +5,15 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../config/map_config.dart';
+import '../auth/auth_service.dart';
 import 'login_screen.dart';
+import 'peta_screen.dart';
+import '../design/tokens.dart';
 
 class DetailDestinasiPage extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -21,12 +27,10 @@ class DetailDestinasiPage extends StatefulWidget {
 
 class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
   late Map<String, dynamic> _currentData;
-  late List<dynamic> _otherDestinasi;
 
   bool _isLoggedIn = false;
   String? _jwtToken;
   String? _userRole;
-  String? _userName;
 
   // Ulasan State
   bool _isLoadingUlasan = true;
@@ -41,14 +45,89 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
   String? _reviewFotoBase64;
   bool _isSubmitting = false;
 
+  // Lokasi & Jarak Pengguna
+  Position? _userPosition;
+
   int? get _destinasiId => _currentData['id'] is int ? _currentData['id'] : int.tryParse(_currentData['id']?.toString() ?? '');
+
+  double? get _destLatitude {
+    final lat = _currentData['latitude'];
+    if (lat == null) return null;
+    return double.tryParse(lat.toString());
+  }
+
+  double? get _destLongitude {
+    final lon = _currentData['longitude'];
+    if (lon == null) return null;
+    return double.tryParse(lon.toString());
+  }
+
+  double? get _calculatedDistanceKm {
+    if (_userPosition == null || _destLatitude == null || _destLongitude == null) return null;
+    return MapConfig.haversineDistanceKm(
+      _userPosition!.latitude,
+      _userPosition!.longitude,
+      _destLatitude!,
+      _destLongitude!,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     _currentData = widget.data;
-    _updateOtherDestinasi();
     _checkAuthAndLoad();
+    _getUserLocation();
+  }
+
+  Future<void> _getUserLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+
+      if (mounted) {
+        setState(() => _userPosition = position);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openGoogleMapsDirections() async {
+    final lat = _destLatitude;
+    final lon = _destLongitude;
+
+    if (lat == null || lon == null) {
+      await MapConfig.openGoogleMapsKawasan();
+      return;
+    }
+
+    final String name = Uri.encodeComponent(_currentData['name'] ?? _currentData['nama'] ?? 'Wisata Wapit');
+    final Uri mapsUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&destination_place_id=$name");
+
+    try {
+      bool launched = await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        bool defaultLaunched = await launchUrl(mapsUri, mode: LaunchMode.platformDefault);
+        if (!defaultLaunched) {
+          await MapConfig.openGoogleMapsKawasan();
+        }
+      }
+    } catch (_) {
+      await MapConfig.openGoogleMapsKawasan();
+    }
   }
 
   @override
@@ -57,25 +136,15 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     super.dispose();
   }
 
-  void _updateOtherDestinasi() {
-    final currentId = _destinasiId;
-    _otherDestinasi = widget.allDestinasi.where((item) {
-      final id = item['id'] is int ? item['id'] : int.tryParse(item['id']?.toString() ?? '');
-      return id != currentId;
-    }).toList();
-  }
-
   Future<void> _checkAuthAndLoad() async {
+    final token = await AuthService.instance.getToken();
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
     final role = prefs.getString('user_role');
-    final name = prefs.getString('user_nama');
 
     if (mounted) {
       setState(() {
         _jwtToken = token;
         _userRole = role;
-        _userName = name;
         _isLoggedIn = token != null && token.isNotEmpty;
       });
       await _fetchUlasan();
@@ -204,7 +273,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                 ),
                 const Text(
                   "Tambah Foto Ulasan",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Montserrat'),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: AppTokens.fontFamily),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -382,7 +451,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Hapus Ulasan", style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.bold)),
+        title: const Text("Hapus Ulasan", style: TextStyle(fontFamily: AppTokens.fontFamily, fontWeight: FontWeight.bold)),
         content: const Text("Apakah Anda yakin ingin menghapus ulasan ini?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
@@ -477,6 +546,23 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                 onTap: () => Navigator.pop(context)
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 20.0, top: 8, bottom: 8),
+                child: _buildGlassButton(
+                  icon: Icons.map_outlined,
+                  size: 20,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PetaScreen(initialDestinasiId: _destinasiId),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
               background: Stack(
@@ -532,7 +618,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     ),
 
                     // --- Sapaan & Judul ---
-                    Text("Halo Petualang!", style: TextStyle(fontFamily: 'Montserrat', fontSize: 28, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.5)),
+                    Text("Halo Petualang!", style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 28, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.5)),
                     const SizedBox(height: 6),
                     Text("Jelajahi $nama", style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: subTextColor, fontWeight: FontWeight.w500)),
                     
@@ -543,10 +629,150 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildPremiumIconInfo(Icons.location_on, primaryColor, nama.length > 12 ? "${nama.substring(0, 10)}..." : nama, textColor, subTextColor),
-                        _buildPremiumIconInfo(Icons.explore, primaryColor, "1,5 KM", textColor, subTextColor),
-                        _buildPremiumIconInfo(Icons.park, primaryColor, "Akses Mudah", textColor, subTextColor),
+                        _buildPremiumIconInfo(
+                          Icons.location_on, 
+                          primaryColor, 
+                          nama.length > 12 ? "${nama.substring(0, 10)}..." : nama, 
+                          textColor, 
+                          subTextColor,
+                          caption: "Temanggung",
+                        ),
+                        _buildPremiumIconInfo(
+                          Icons.explore_rounded, 
+                          primaryColor, 
+                          _calculatedDistanceKm != null 
+                              ? MapConfig.formatDistance(_calculatedDistanceKm!) 
+                              : "Peta & Rute", 
+                          textColor, 
+                          subTextColor,
+                          caption: _calculatedDistanceKm != null 
+                              ? MapConfig.estimateDuration(_calculatedDistanceKm!) 
+                              : "Lihat Peta",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PetaScreen(initialDestinasiId: _destinasiId),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildPremiumIconInfo(
+                          Icons.park, 
+                          primaryColor, 
+                          "Akses Mudah", 
+                          textColor, 
+                          subTextColor,
+                          caption: "Jalan Beraspal",
+                        ),
                       ],
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Divider(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200, thickness: 1.5),
+                    ),
+
+                    // --- KARTU PANDUAN LOKASI & RUTE LOKASI ---
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? const Color(0xFF242426) : const Color(0xFFF4F9F6),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                        boxShadow: isDarkMode ? [] : [
+                          BoxShadow(
+                            color: primaryColor.withValues(alpha: 0.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.near_me_rounded, color: primaryColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Lokasi & Jarak Wisata",
+                                      style: TextStyle(
+                                        fontFamily: AppTokens.fontFamily,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _calculatedDistanceKm != null
+                                          ? "${MapConfig.formatDistance(_calculatedDistanceKm!)} dari posisi Anda (${MapConfig.estimateDuration(_calculatedDistanceKm!)})"
+                                          : "Kawasan Hutan Pinus Wapit, Umbul Jumprit",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12,
+                                        color: subTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.map_rounded, size: 16),
+                                  label: const Text("Peta Interaktif", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PetaScreen(initialDestinasiId: _destinasiId),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.directions_rounded, size: 16),
+                                  label: const Text("Petunjuk Arah", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: primaryColor,
+                                    side: BorderSide(color: primaryColor),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: _openGoogleMapsDirections,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
 
                     Padding(
@@ -555,7 +781,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     ),
 
                     // --- Deskripsi ---
-                    Text("Deskripsi", style: TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
+                    Text("Deskripsi", style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
                     const SizedBox(height: 16),
                     Text(
                       deskripsi, 
@@ -574,7 +800,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Ulasan & Rating", style: TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
+                        Text("Ulasan & Rating", style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
                         if (_totalUlasan > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -600,7 +826,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     const SizedBox(height: 24),
 
                     // 3. Daftar Ulasan Wisatawan
-                    Text("Ulasan Wisatawan", style: TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+                    Text("Ulasan Wisatawan", style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
                     const SizedBox(height: 12),
                     _buildReviewList(cardColor, textColor, subTextColor, primaryColor, isDarkMode),
 
@@ -613,7 +839,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Wisata Lain", style: TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
+                        Text("Wisata Lain", style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 20, fontWeight: FontWeight.w700, color: textColor)),
                         Icon(Icons.arrow_forward, color: primaryColor, size: 20)
                       ],
                     ),
@@ -658,7 +884,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                                 ),
                                 alignment: Alignment.bottomLeft,
                                 padding: const EdgeInsets.all(12),
-                                child: Text(itemLainName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13, fontFamily: 'Montserrat')),
+                                child: Text(itemLainName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13, fontFamily: AppTokens.fontFamily)),
                               ),
                             ),
                           );
@@ -692,7 +918,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
             children: [
               Text(
                 _avgRating > 0 ? _avgRating.toStringAsFixed(1) : "0.0",
-                style: TextStyle(fontFamily: 'Montserrat', fontSize: 36, fontWeight: FontWeight.w900, color: textColor),
+                style: TextStyle(fontFamily: AppTokens.fontFamily, fontSize: 36, fontWeight: FontWeight.w900, color: textColor),
               ),
               Row(
                 children: List.generate(5, (index) {
@@ -791,7 +1017,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
             children: [
               Text(
                 isEditing ? "Ulasan Anda (Edit)" : "Tulis Ulasan Anda",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor, fontFamily: 'Montserrat'),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor, fontFamily: AppTokens.fontFamily),
               ),
               if (isEditing)
                 IconButton(
@@ -1195,7 +1421,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
         final bool isDark = Theme.of(ctx).brightness == Brightness.dark;
         final Color cardBg = isDark ? const Color(0xFF1E2623) : Colors.white;
         final Color textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-        final Color primaryColor = const Color(0xFF5E9190);
+        const Color primaryColor = Color(0xFF5E9190);
 
         return StatefulBuilder(
           builder: (modalCtx, setModalState) {
@@ -1228,7 +1454,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                   Text(
                     currentBalasan != null ? "Edit Balasan Pengelola" : "Tulis Balasan Pengelola",
                     style: TextStyle(
-                      fontFamily: 'Montserrat',
+                      fontFamily: AppTokens.fontFamily,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: textColor,
@@ -1377,28 +1603,59 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     );
   }
 
-  Widget _buildPremiumIconInfo(IconData icon, Color primaryColor, String label, Color textColor, Color subTextColor) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.08), 
-              shape: BoxShape.circle,
-              border: Border.all(color: primaryColor.withValues(alpha: 0.2), width: 1)
-            ),
-            child: Icon(icon, color: primaryColor, size: 26),
+  Widget _buildPremiumIconInfo(
+    IconData icon, 
+    Color primaryColor, 
+    String label, 
+    Color textColor, 
+    Color subTextColor, {
+    String? caption,
+    VoidCallback? onTap,
+  }) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: primaryColor.withValues(alpha: 0.08), 
+            shape: BoxShape.circle,
+            border: Border.all(color: primaryColor.withValues(alpha: 0.2), width: 1)
           ),
-          const SizedBox(height: 12),
+          child: Icon(icon, color: primaryColor, size: 26),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          label, 
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor, fontFamily: AppTokens.fontFamily),
+          maxLines: 2, 
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (caption != null) ...[
+          const SizedBox(height: 2),
           Text(
-            label, 
+            caption,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor, fontFamily: 'Inter'),
-            maxLines: 2, overflow: TextOverflow.ellipsis,
-          )
+            style: TextStyle(fontSize: 10, color: subTextColor, fontFamily: 'Inter', fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
-      ),
+      ],
+    );
+
+    return Expanded(
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: content,
+              ),
+            )
+          : content,
     );
   }
 }

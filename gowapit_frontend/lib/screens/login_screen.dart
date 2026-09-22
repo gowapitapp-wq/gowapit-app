@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lottie/lottie.dart';
-import '../config/api_config.dart';
+import '../auth/auth_service.dart';
 import '../main.dart';
 import 'terms_privacy_screen.dart';
 import 'scanner_screen.dart';
+import '../design/tokens.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool initialRegisterMode;
@@ -40,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -49,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animController,
@@ -69,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  // --- LOGIKA AUTENTIKASI API (EMAIL & PASSWORD) ---
+  // --- LOGIKA AUTENTIKASI VIA AUTH SERVICE (EMAIL & PASSWORD) ---
   Future<void> _submitAuth() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -77,85 +73,50 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _isLoading = true;
     });
 
-    final Uri authUri = ApiConfig.uri(isLoginMode ? "/api/login" : "/api/register");
-
-    final Map<String, dynamic> bodyData = isLoginMode
-        ? {
-            "email": _emailController.text.trim(),
-            "password": _passwordController.text,
-          }
-        : {
-            "nama_lengkap": _nameController.text.trim(),
-            "email": _emailController.text.trim(),
-            "password": _passwordController.text,
-            if (_referralCodeController.text.trim().isNotEmpty)
-              "referral_code": _referralCodeController.text.trim(),
-          };
-
     try {
-      final response = await http.post(
-        authUri,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(bodyData),
-      );
-
-      Map<String, dynamic> responseData = {};
-      try {
-        responseData = jsonDecode(response.body);
-      } catch (_) {}
+      final AuthResult res = isLoginMode
+          ? await AuthService.instance.signInWithEmail(
+              _emailController.text.trim(),
+              _passwordController.text,
+            )
+          : await AuthService.instance.signUpWithEmail(
+              _emailController.text.trim(),
+              _passwordController.text,
+              _nameController.text.trim(),
+              referralCode: _referralCodeController.text.trim(),
+            );
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
+      if (res.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(responseData["message"] ?? (isLoginMode ? "Login Berhasil!" : "Pendaftaran Berhasil! Silakan Masuk.")),
-            backgroundColor: const Color(0xFF2E7D32),
+            content: Text(isLoginMode ? "Login Berhasil!" : "Pendaftaran Berhasil! Selamat datang di Go Wapit."),
+            backgroundColor: AppTokens.statusGreen,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
           ),
         );
 
-        if (isLoginMode) {
-          final String token = responseData['access_token'] ?? '';
-          final String role = (responseData['user'] != null && responseData['user']['role'] != null)
-              ? responseData['user']['role']
-              : 'user';
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('jwt_token', token);
-          await prefs.setString('user_role', role);
-
-          if (mounted) {
-            if (role == 'petugas' || role == 'staff') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MainNavigator()),
-              );
-            }
-          }
+        final String role = res.role ?? 'user';
+        if (role == 'petugas' || role == 'staff') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
+          );
         } else {
-          setState(() {
-            isLoginMode = true;
-            _passwordController.clear();
-          });
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigator()),
+          );
         }
       } else {
-        String detailMessage = ApiConfig.extractErrorMessage(
-          responseData["detail"] ?? responseData["message"],
-          fallback: "Gagal memproses (Kode: ${response.statusCode})",
-        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(detailMessage),
-            backgroundColor: const Color(0xFFD32F2F),
+            content: Text(res.message),
+            backgroundColor: AppTokens.statusRed,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
           ),
         );
       }
@@ -163,11 +124,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Terjadi gangguan koneksi internet. Silakan coba beberapa saat lagi."),
-          backgroundColor: const Color(0xFFD32F2F),
+          content: Text("Terjadi kesalahan autentikasi: ${e.toString()}"),
+          backgroundColor: AppTokens.statusRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 4),
+          shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
         ),
       );
     } finally {
@@ -175,111 +135,57 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  // --- LOGIKA GOOGLE SIGN IN ---
+  // --- LOGIKA GOOGLE SIGN IN VIA AUTH SERVICE ---
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
 
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb ? ApiConfig.googleWebClientId : null,
-        serverClientId: ApiConfig.googleWebClientId,
-      );
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
-      final String? accessToken = googleAuth.accessToken;
-
-      if ((idToken == null || idToken.isEmpty) && (accessToken == null || accessToken.isEmpty) && googleUser.email.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Gagal mendapatkan izin autentikasi dari akun Google."),
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        return;
-      }
-
-      final Uri authUri = ApiConfig.uri("/api/auth/google");
-      final response = await http.post(
-        authUri,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "id_token": idToken,
-          "access_token": accessToken,
-          "email": googleUser.email,
-          "nama_lengkap": googleUser.displayName,
-          "google_sub": googleUser.id,
-          "foto_profil": googleUser.photoUrl,
-        }),
-      );
-
-      Map<String, dynamic> responseData = {};
-      try {
-        responseData = jsonDecode(response.body);
-      } catch (_) {}
+      final AuthResult res = await AuthService.instance.signInWithGoogle();
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
+      if (res.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(responseData["message"] ?? "Login Google Berhasil!"),
-            backgroundColor: const Color(0xFF2E7D32),
+            content: Text(res.message.isEmpty ? "Login Google Berhasil!" : res.message),
+            backgroundColor: AppTokens.statusGreen,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
           ),
         );
 
-        final String token = responseData['access_token'] ?? '';
-        final String role = (responseData['user'] != null && responseData['user']['role'] != null)
-            ? responseData['user']['role']
-            : 'user';
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', token);
-        await prefs.setString('user_role', role);
-
-        if (mounted) {
-          if (role == 'petugas' || role == 'staff') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainNavigator()),
-            );
-          }
+        final String role = res.role ?? 'user';
+        if (role == 'petugas' || role == 'staff') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScannerScreen(isStaffPortal: true)),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigator()),
+          );
         }
       } else {
-        String detailMessage = responseData["detail"] ?? responseData["message"] ?? "Gagal login Google (Kode: ${response.statusCode})";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(detailMessage),
-            backgroundColor: const Color(0xFFD32F2F),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        if (!res.message.contains("dibatalkan")) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res.message),
+              backgroundColor: AppTokens.statusRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
+            ),
+          );
+        }
       }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Terjadi kesalahan saat Google Sign-In: $error"),
-          backgroundColor: const Color(0xFFD32F2F),
+          content: Text("Terjadi kesalahan Google Sign-In: $error"),
+          backgroundColor: AppTokens.statusRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
         ),
       );
     } finally {
@@ -292,31 +198,36 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        backgroundColor: context.surfaceCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppTokens.r18,
+          side: BorderSide(color: context.hairlineBorder),
+        ),
+        title: Row(
           children: [
-            Icon(Icons.lock_reset, color: Color(0xFF1E524D)),
-            SizedBox(width: 10),
-            Text("Lupa Password?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Icon(Icons.lock_reset, color: context.primaryAccent),
+            const SizedBox(width: AppTokens.sXS),
+            Text("Lupa Password?", style: AppTokens.tagline.copyWith(color: context.textPrimary)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Masukkan email akun Anda. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi.",
-              style: TextStyle(fontSize: 13, color: Colors.black87),
+              style: AppTokens.caption.copyWith(color: context.textMuted),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.sMD),
             TextField(
               controller: resetEmailController,
               keyboardType: TextInputType.emailAddress,
+              style: TextStyle(fontFamily: AppTokens.fontFamily, color: context.textPrimary),
               decoration: InputDecoration(
                 hintText: "nama@email.com",
-                prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                prefixIcon: const Icon(Icons.email_outlined, size: 18),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: AppTokens.pill),
               ),
             ),
           ],
@@ -324,24 +235,40 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+            child: Text("Batal", style: TextStyle(color: context.textMuted, fontFamily: AppTokens.fontFamily)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E524D),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: context.primaryAccent,
+              foregroundColor: context.isDarkMode ? AppTokens.surfaceBlack : AppTokens.canvas,
+              shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
             ),
-            onPressed: () {
+            onPressed: () async {
+              final String emailTarget = resetEmailController.text.trim();
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Tautan pemulihan dikirim ke ${resetEmailController.text.trim().isEmpty ? 'email Anda' : resetEmailController.text.trim()}"),
-                  backgroundColor: const Color(0xFF2E7D32),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              );
+              if (emailTarget.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text("Silakan masukkan alamat email yang valid."),
+                    backgroundColor: AppTokens.statusRed,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
+                  ),
+                );
+                return;
+              }
+
+              final res = await AuthService.instance.sendPasswordResetEmail(emailTarget);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(res.message),
+                    backgroundColor: res.isSuccess ? AppTokens.statusGreen : AppTokens.statusRed,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: AppTokens.r11),
+                  ),
+                );
+              }
             },
             child: const Text("Kirim Tautan"),
           ),
@@ -361,37 +288,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 1. Emboss Dark Shadow Offset (Bawah Kanan)
                 Transform.translate(
                   offset: const Offset(3.0, 3.0),
                   child: Opacity(
-                    opacity: isDark ? 0.12 : 0.08,
+                    opacity: isDark ? 0.08 : 0.05,
                     child: Image.asset(
                       'assets/images/Logo.png',
                       fit: BoxFit.contain,
-                      color: isDark ? Colors.black : const Color(0xFF1E524D),
+                      color: isDark ? Colors.black : AppTokens.actionPine,
                     ),
                   ),
                 ),
-                // 2. Emboss White Highlight Offset (Atas Kiri)
                 Transform.translate(
                   offset: const Offset(-2.5, -2.5),
                   child: Opacity(
-                    opacity: isDark ? 0.06 : 0.85,
+                    opacity: isDark ? 0.05 : 0.60,
                     child: Image.asset(
                       'assets/images/Logo.png',
                       fit: BoxFit.contain,
-                      color: isDark ? const Color(0xFF76B3AC) : Colors.white,
+                      color: isDark ? AppTokens.actionPineDark : Colors.white,
                     ),
                   ),
                 ),
-                // 3. Base Silhouette Logo (Transparan Halus)
                 Opacity(
-                  opacity: isDark ? 0.06 : 0.04,
+                  opacity: isDark ? 0.04 : 0.03,
                   child: Image.asset(
                     'assets/images/Logo.png',
                     fit: BoxFit.contain,
-                    color: isDark ? Colors.white : const Color(0xFF1E524D),
+                    color: isDark ? Colors.white : AppTokens.actionPine,
                   ),
                 ),
               ],
@@ -404,60 +328,37 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
-    final Color cardBg = isDark ? const Color(0xFF1A2421) : Colors.white;
-    final Color textColor = isDark ? Colors.white : const Color(0xFF121E1C);
-    final Color subTextColor = isDark ? Colors.white70 : const Color(0xFF4A5D5A);
+    final bool isDark = context.isDarkMode;
+    final Color primaryPine = context.primaryAccent;
+    final Color cardBg = context.surfaceCard;
+    final Color textColor = context.textPrimary;
+    final Color subTextColor = context.textMuted;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121816) : Colors.white,
+      backgroundColor: isDark ? AppTokens.surfaceBlack : AppTokens.canvas,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG, vertical: AppTokens.sLG),
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 440),
+                  constraints: const BoxConstraints(maxWidth: 420),
                   decoration: BoxDecoration(
                     color: cardBg,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark
-                            ? Colors.black.withValues(alpha: 0.5)
-                            : const Color(0xFF1E524D).withValues(alpha: 0.10),
-                        blurRadius: 36,
-                        offset: const Offset(0, 10),
-                        spreadRadius: 1,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.12)
-                          : const Color(0xFFDDE6E2),
-                      width: 1.2,
-                    ),
+                    borderRadius: AppTokens.r18,
+                    border: Border.all(color: context.hairlineBorder, width: 1.0),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: AppTokens.r18,
                     child: Stack(
                       children: [
-                        // --- LOGO EMBOSS TRANSPARAN DI BELAKANG ELEMEN LOGIN ---
                         _buildEmbossedWatermark(isDark),
-
-                        // --- ELEMEN FORM LOGIN / REGISTER ---
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 26.0, vertical: 30.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
                           child: Form(
                             key: _formKey,
                             child: Column(
@@ -467,35 +368,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 // --- ANIMATED LOTTIE LOGO ---
                                 Center(
                                   child: SizedBox(
-                                    height: 100,
-                                    width: 100,
+                                    height: 84,
+                                    width: 84,
                                     child: Lottie.asset(
                                       'assets/lottie/login.json',
                                       fit: BoxFit.contain,
                                       errorBuilder: (_, __, ___) => Container(
-                                        width: 68,
-                                        height: 68,
+                                        width: 60,
+                                        height: 60,
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: AppTokens.canvas,
                                           shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: primaryColor.withValues(alpha: 0.25),
-                                              blurRadius: 16,
-                                              offset: const Offset(0, 6),
-                                            ),
-                                          ],
+                                          border: Border.all(color: context.hairlineBorder),
                                         ),
-                                        padding: const EdgeInsets.all(10),
-                                        child: Image.asset(
-                                          'assets/images/Logo.png',
-                                          fit: BoxFit.contain,
-                                        ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: Image.asset('assets/images/Logo.png', fit: BoxFit.contain),
                                       ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: AppTokens.sXS),
 
                                 // --- TITLE & SUBTITLE ---
                                 AnimatedSwitcher(
@@ -504,78 +396,54 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     key: ValueKey<bool>(isLoginMode),
                                     children: [
                                       Text(
-                                        isLoginMode ? "Selamat Datang!" : "Buat Akun Baru!",
+                                        isLoginMode ? "Selamat Datang" : "Buat Akun",
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w800,
+                                        style: AppTokens.lead.copyWith(
                                           color: textColor,
-                                          fontFamily: 'Montserrat',
-                                          letterSpacing: -0.5,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      const SizedBox(height: AppTokens.sXXS),
                                       Text(
                                         isLoginMode
-                                            ? "Masuk untuk menjelajahi keindahan Hutan Pinus Wapit"
-                                            : "Daftar untuk menikmati berbagai fasilitas dan kemudahan",
+                                            ? "Masuk untuk menjelajahi Hutan Pinus Wapit"
+                                            : "Daftar untuk reservasi & kemudahan wisata",
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 13,
+                                        style: AppTokens.caption.copyWith(
                                           color: subTextColor,
-                                          fontFamily: 'Inter',
-                                          height: 1.35,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: AppTokens.sLG),
 
-                                // --- SOCIAL AUTH BUTTON (GOOGLE) ---
+                                // --- SOCIAL AUTH BUTTON (GOOGLE GHOST PILL) ---
                                 _buildSocialButton(
                                   onPressed: _isLoading ? null : _loginWithGoogle,
                                   isDark: isDark,
-                                  icon: const GoogleLogoWidget(size: 20),
+                                  icon: const GoogleLogoWidget(size: 18),
                                   label: "Lanjutkan dengan Google",
-                                  backgroundColor: isDark ? const Color(0xFF24322C) : Colors.white,
                                   textColor: textColor,
-                                  borderColor: isDark
-                                      ? Colors.white.withValues(alpha: 0.15)
-                                      : const Color(0xFFDDE6E2),
+                                  borderColor: context.hairlineBorder,
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: AppTokens.sMD),
 
                                 // --- OR DIVIDER ---
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: Divider(
-                                        color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
-                                        thickness: 1,
-                                      ),
-                                    ),
+                                    Expanded(child: Divider(color: context.hairlineBorder)),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12),
                                       child: Text(
-                                        isLoginMode ? "atau masuk dengan email" : "atau daftar dengan email",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                          color: subTextColor,
-                                          fontFamily: 'Inter',
-                                        ),
+                                        isLoginMode ? "atau email" : "atau email",
+                                        style: AppTokens.finePrint.copyWith(color: subTextColor),
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Divider(
-                                        color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
-                                        thickness: 1,
-                                      ),
-                                    ),
+                                    Expanded(child: Divider(color: context.hairlineBorder)),
                                   ],
                                 ),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: AppTokens.sMD),
 
                                 // --- INPUT FIELDS ---
                                 AnimatedSize(
@@ -583,7 +451,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   curve: Curves.easeInOut,
                                   child: Column(
                                     children: [
-                                      // Full Name Field (Register Mode Only)
                                       if (!isLoginMode) ...[
                                         _buildModernField(
                                           controller: _nameController,
@@ -597,10 +464,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             return null;
                                           },
                                         ),
-                                        const SizedBox(height: 14),
+                                        const SizedBox(height: AppTokens.sSM),
                                       ],
-
-                                      // Email Field
                                       _buildModernField(
                                         controller: _emailController,
                                         hint: "Alamat Email",
@@ -617,9 +482,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           return null;
                                         },
                                       ),
-                                      const SizedBox(height: 14),
-
-                                      // Password Field
+                                      const SizedBox(height: AppTokens.sSM),
                                       _buildModernField(
                                         controller: _passwordController,
                                         hint: "Kata Sandi",
@@ -640,10 +503,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           return null;
                                         },
                                       ),
-
-                                      // Referral Code Field (Register Mode Only)
                                       if (!isLoginMode) ...[
-                                        const SizedBox(height: 14),
+                                        const SizedBox(height: AppTokens.sSM),
                                         _buildModernField(
                                           controller: _referralCodeController,
                                           hint: "Kode Referral (opsional)",
@@ -656,9 +517,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   ),
                                 ),
 
-                                // --- FORGOT PASSWORD (LOGIN MODE) ---
+                                // --- FORGOT PASSWORD ---
                                 if (isLoginMode) ...[
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: AppTokens.sXS),
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: GestureDetector(
@@ -667,61 +528,56 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         padding: const EdgeInsets.symmetric(vertical: 4),
                                         child: Text(
                                           "Lupa password?",
-                                          style: TextStyle(
-                                            fontSize: 12,
+                                          style: AppTokens.caption.copyWith(
+                                            color: primaryPine,
                                             fontWeight: FontWeight.w600,
-                                            color: primaryColor,
-                                            fontFamily: 'Inter',
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 22),
+                                const SizedBox(height: AppTokens.sLG),
 
-                                // --- PRIMARY SUBMIT BUTTON ---
+                                // --- PRIMARY SUBMIT PILL BUTTON ---
                                 SizedBox(
-                                  height: 50,
+                                  height: 48,
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : _submitAuth,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 2,
-                                      shadowColor: primaryColor.withValues(alpha: 0.4),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
+                                      backgroundColor: primaryPine,
+                                      foregroundColor: isDark ? AppTokens.surfaceBlack : AppTokens.canvas,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
                                     ),
                                     child: _isLoading
-                                        ? const SizedBox(
-                                            width: 22,
-                                            height: 22,
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
                                             child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2.5,
+                                              color: isDark ? AppTokens.surfaceBlack : AppTokens.canvas,
+                                              strokeWidth: 2.0,
                                             ),
                                           )
                                         : Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Text(
-                                                isLoginMode ? "Masuk ke Akun" : "Daftar Sekarang",
+                                                isLoginMode ? "Masuk" : "Daftar",
                                                 style: const TextStyle(
                                                   fontSize: 15,
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.3,
-                                                  fontFamily: 'Montserrat',
+                                                  fontWeight: FontWeight.w600,
+                                                  fontFamily: AppTokens.fontFamily,
+                                                  letterSpacing: -0.2,
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
-                                              const Icon(Icons.arrow_forward_rounded, size: 18),
+                                              const SizedBox(width: AppTokens.sXS),
+                                              const Icon(Icons.arrow_forward_rounded, size: 16),
                                             ],
                                           ),
                                   ),
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: AppTokens.sMD),
 
                                 // --- TOGGLE LOGIN / REGISTER MODE ---
                                 Center(
@@ -737,10 +593,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       child: RichText(
                                         textAlign: TextAlign.center,
                                         text: TextSpan(
-                                          style: TextStyle(
-                                            fontSize: 13,
+                                          style: AppTokens.caption.copyWith(
                                             color: subTextColor,
-                                            fontFamily: 'Montserrat',
+                                            fontFamily: AppTokens.fontFamily,
                                           ),
                                           children: [
                                             TextSpan(
@@ -749,10 +604,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   : "Sudah memiliki akun? ",
                                             ),
                                             TextSpan(
-                                              text: isLoginMode ? "Daftar Sekarang" : "Masuk di Sini",
+                                              text: isLoginMode ? "Daftar" : "Masuk",
                                               style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: primaryColor,
+                                                fontWeight: FontWeight.w600,
+                                                color: primaryPine,
                                               ),
                                             ),
                                           ],
@@ -761,7 +616,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: AppTokens.sSM),
 
                                 // --- TERMS & PRIVACY FOOTER LINK ---
                                 Center(
@@ -775,13 +630,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       );
                                     },
                                     child: Text(
-                                      "Syarat & Ketentuan Privasi",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: subTextColor.withValues(alpha: 0.8),
+                                      "Syarat & Kebijakan Privasi",
+                                      style: AppTokens.finePrint.copyWith(
+                                        color: subTextColor,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: subTextColor.withValues(alpha: 0.5),
-                                        fontFamily: 'Inter',
                                       ),
                                     ),
                                   ),
@@ -815,9 +667,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     bool obscureText = false,
     VoidCallback? onTogglePassword,
   }) {
-    final Color fieldBg = isDark ? const Color(0xFF16221D) : const Color(0xFFF6FAF8);
-    final Color borderColor = isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFDDE6E2);
-    final Color activeColor = isDark ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
+    final Color fieldBg = isDark ? AppTokens.surfaceTile2 : AppTokens.canvasParchment;
+    final Color borderColor = context.hairlineBorder;
+    final Color activeColor = context.primaryAccent;
 
     return TextFormField(
       controller: controller,
@@ -826,49 +678,49 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       validator: validator,
       style: TextStyle(
         fontSize: 14,
-        color: isDark ? Colors.white : const Color(0xFF121E1C),
-        fontFamily: 'Inter',
+        color: context.textPrimary,
+        fontFamily: AppTokens.fontFamily,
       ),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
           fontSize: 13.5,
-          color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
-          fontFamily: 'Inter',
+          color: context.textMuted,
+          fontFamily: AppTokens.fontFamily,
         ),
         prefixIcon: Icon(
           icon,
-          size: 20,
-          color: isDark ? Colors.white54 : const Color(0xFF1E524D).withValues(alpha: 0.7),
+          size: 18,
+          color: context.textMuted,
         ),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 20,
-                  color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                  size: 18,
+                  color: context.textMuted,
                 ),
                 onPressed: onTogglePassword,
               )
             : null,
         filled: true,
         fillColor: fieldBg,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppTokens.pill,
           borderSide: BorderSide(color: borderColor, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: activeColor, width: 1.8),
+          borderRadius: AppTokens.pill,
+          borderSide: BorderSide(color: activeColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
+          borderRadius: AppTokens.pill,
+          borderSide: const BorderSide(color: AppTokens.statusRed, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.8),
+          borderRadius: AppTokens.pill,
+          borderSide: const BorderSide(color: AppTokens.statusRed, width: 1.5),
         ),
       ),
     );
@@ -879,36 +731,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     required bool isDark,
     required Widget icon,
     required String label,
-    required Color backgroundColor,
     required Color textColor,
     required Color borderColor,
   }) {
     return SizedBox(
-      height: 46,
+      height: 44,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor,
+          backgroundColor: isDark ? AppTokens.surfaceTile2 : AppTokens.canvas,
           foregroundColor: textColor,
           side: BorderSide(color: borderColor, width: 1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          elevation: backgroundColor == Colors.white ? 0 : 1,
+          shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          elevation: 0,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             icon,
-            const SizedBox(width: 8),
+            const SizedBox(width: AppTokens.sXS),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: textColor,
-                fontFamily: 'Montserrat',
+                fontFamily: AppTokens.fontFamily,
+                letterSpacing: -0.2,
               ),
             ),
           ],

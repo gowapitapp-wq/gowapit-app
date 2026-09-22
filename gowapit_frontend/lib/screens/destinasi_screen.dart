@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
-import 'detail_destinasi_screen.dart'; 
+import '../config/map_config.dart';
+import '../design/tokens.dart';
+import 'detail_destinasi_screen.dart';
 
 class DestinasiPage extends StatefulWidget {
   const DestinasiPage({super.key});
@@ -13,11 +16,42 @@ class DestinasiPage extends StatefulWidget {
 class _DestinasiPageState extends State<DestinasiPage> {
   List<dynamic> _listDestinasi = [];
   bool _isLoading = true;
+  Position? _userPosition;
 
   @override
   void initState() {
     super.initState();
-    _fetchDestinasiData();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    _getUserLocation();
+    await _fetchDestinasiData();
+  }
+
+  Future<void> _getUserLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+
+      if (mounted) {
+        setState(() => _userPosition = position);
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchDestinasiData({bool forceRefresh = false}) async {
@@ -52,9 +86,9 @@ class _DestinasiPageState extends State<DestinasiPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
+    final bool isDark = context.isDarkMode;
+    final Color primaryPine = context.primaryAccent;
+    final Color textColor = context.textPrimary;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -62,42 +96,47 @@ class _DestinasiPageState extends State<DestinasiPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: primaryColor),
         title: Text(
-          "Destinasi", 
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 20)
+          "Destinasi Wisata",
+          style: AppTokens.tagline.copyWith(color: textColor),
         ),
       ),
-      body: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: primaryColor))
-        : _listDestinasi.isEmpty
-            ? Center(child: Text("Data destinasi kosong.", style: TextStyle(color: primaryColor)))
-            : RefreshIndicator(
-                color: primaryColor,
-                onRefresh: _fetchDestinasiData,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  itemCount: _listDestinasi.length,
-                  itemBuilder: (context, index) {
-                    final item = _listDestinasi[index];
-                    return HoverableDestinasiCard(
-                      item: item,
-                      allDestinasi: _listDestinasi,
-                      isDarkMode: isDarkMode,
-                      onRefresh: _fetchDestinasiData,
-                    );
-                  },
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryPine))
+          : _listDestinasi.isEmpty
+              ? Center(
+                  child: Text(
+                    "Data destinasi kosong.",
+                    style: AppTokens.caption.copyWith(color: context.textMuted),
+                  ),
+                )
+              : RefreshIndicator(
+                  color: primaryPine,
+                  onRefresh: () => _fetchDestinasiData(forceRefresh: true),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG, vertical: AppTokens.sSM),
+                    itemCount: _listDestinasi.length,
+                    itemBuilder: (context, index) {
+                      final item = _listDestinasi[index];
+                      return HoverableDestinasiCard(
+                        item: item,
+                        allDestinasi: _listDestinasi,
+                        isDarkMode: isDark,
+                        userPosition: _userPosition,
+                        onRefresh: _fetchDestinasiData,
+                      );
+                    },
+                  ),
                 ),
-              ),
     );
   }
 }
 
-// Komponen Kustom untuk Efek Hover/Press
 class HoverableDestinasiCard extends StatefulWidget {
   final dynamic item;
   final List<dynamic> allDestinasi;
   final bool isDarkMode;
+  final Position? userPosition;
   final VoidCallback onRefresh;
 
   const HoverableDestinasiCard({
@@ -105,6 +144,7 @@ class HoverableDestinasiCard extends StatefulWidget {
     required this.item,
     required this.allDestinasi,
     required this.isDarkMode,
+    this.userPosition,
     required this.onRefresh,
   });
 
@@ -113,127 +153,177 @@ class HoverableDestinasiCard extends StatefulWidget {
 }
 
 class _HoverableDestinasiCardState extends State<HoverableDestinasiCard> {
-  bool _isPressed = false; // State untuk mendeteksi tekanan
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final Color cardColor = widget.isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color primaryColor = widget.isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
-    final Color secondaryColor = const Color(0xFF2E7D6A);
-    
-    final Color currentBgColor = _isPressed ? primaryColor : cardColor;
-    final Color currentTitleColor = _isPressed ? Colors.white : (widget.isDarkMode ? Colors.white : const Color(0xFF121E1C));
-    final Color currentSubColor = _isPressed ? Colors.white.withValues(alpha: 0.8) : (widget.isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A));
-    final Color currentIconColor = _isPressed ? Colors.white : secondaryColor;
-
-    final List<BoxShadow> ambientShadow = widget.isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
-    ];
+    final Color cardColor = context.surfaceCard;
+    final Color primaryPine = context.primaryAccent;
+    final Color textColor = context.textPrimary;
+    final Color subTextColor = context.textMuted;
 
     final String nama = widget.item['name'] ?? widget.item['nama'] ?? '-';
-    final String deskripsi = widget.item['deskripsi_pendek'] ?? widget.item['deskripsi_singkat'] ?? widget.item['deskripsi_panjang'] ?? '-';
+    final String deskripsi =
+        widget.item['deskripsi_pendek'] ?? widget.item['deskripsi_singkat'] ?? widget.item['deskripsi_panjang'] ?? '-';
     String rawGambar = widget.item['image'] ?? widget.item['gambar'] ?? 'assets/images/placeholder.jpeg';
     final String gambarPath = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
     final num ratingNum = (widget.item['rating'] is num) ? widget.item['rating'] : 0.0;
-    final String ratingStr = (ratingNum > 0) ? ratingNum.toStringAsFixed(1) : "4.8";
-    final int jmlUlasan = (widget.item['jumlah_ulasan'] is num) ? (widget.item['jumlah_ulasan'] as num).toInt() : 0;
+    final int jmlUlasan =
+        (widget.item['jumlah_ulasan'] is num) ? (widget.item['jumlah_ulasan'] as num).toInt() : 0;
+
+    double? distKm;
+    if (widget.userPosition != null && widget.item['latitude'] != null && widget.item['longitude'] != null) {
+      double? lat = double.tryParse(widget.item['latitude'].toString());
+      double? lon = double.tryParse(widget.item['longitude'].toString());
+      if (lat != null && lon != null) {
+        distKm = MapConfig.haversineDistanceKm(widget.userPosition!.latitude, widget.userPosition!.longitude, lat, lon);
+      }
+    }
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) async {
         setState(() => _isPressed = false);
-        // Navigasi ke Halaman Detail
         await Navigator.push(
-          context, 
+          context,
           MaterialPageRoute(
             builder: (context) => DetailDestinasiPage(
-              data: widget.item, 
+              data: widget.item,
               allDestinasi: widget.allDestinasi,
-            )
-          )
+            ),
+          ),
         );
         widget.onRefresh();
       },
       onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 16),
-        height: 110,
-        decoration: BoxDecoration(
-          color: currentBgColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: ambientShadow,
-          border: Border.all(color: widget.isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
-        ),
-        child: Row(
-          children: [
-            // Gambar di sebelah kiri
-            ClipRRect(
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomLeft: Radius.circular(16)),
-              child: Image.asset(
-                gambarPath,
-                width: 100,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) => Container(width: 100, color: Colors.grey.shade300, child: const Icon(Icons.image, color: Colors.grey)),
-              ),
-            ),
-            
-            // Konten Teks di Tengah
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 140),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppTokens.sSM),
+          constraints: const BoxConstraints(minHeight: 118),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: AppTokens.r18,
+            border: Border.all(color: context.hairlineBorder, width: 1),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(17),
+                    bottomLeft: Radius.circular(17),
+                  ),
+                  child: Image.asset(
+                    gambarPath,
+                    width: 104,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => Container(
+                      width: 104,
+                      color: context.surfaceParchment,
+                      child: Icon(Icons.image_outlined, color: subTextColor),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppTokens.sSM, vertical: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            nama, 
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: currentTitleColor, fontFamily: 'Montserrat'),
-                            maxLines: 1, overflow: TextOverflow.ellipsis
-                          ),
-                        ),
-                        if (ratingNum > 0)
-                          Row(
-                            children: [
-                              Icon(Icons.star, size: 14, color: Colors.amber),
-                              const SizedBox(width: 2),
-                              Text(
-                                ratingNum.toStringAsFixed(1),
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: currentSubColor),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                nama,
+                                style: AppTokens.bodyStrong.copyWith(color: textColor, fontSize: 14.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                            if (ratingNum > 0)
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, size: 14, color: AppTokens.statusAmber),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    ratingNum.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTokens.statusAmber,
+                                      fontFamily: AppTokens.fontFamily,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          deskripsi,
+                          style: AppTokens.finePrint.copyWith(color: subTextColor, height: 1.25),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (distKm != null)
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: primaryPine.withValues(alpha: 0.10),
+                                    borderRadius: AppTokens.pill,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.near_me_rounded, size: 10, color: primaryPine),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          "${MapConfig.formatDistance(distKm)} (${MapConfig.estimateDuration(distKm)})",
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryPine,
+                                            fontFamily: AppTokens.fontFamily,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (distKm != null && jmlUlasan > 0) const SizedBox(width: 6),
+                            if (jmlUlasan > 0)
+                              Text(
+                                "$jmlUlasan ulasan",
+                                style: AppTokens.microLegal.copyWith(color: subTextColor),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: Text(
-                        deskripsi, 
-                        style: TextStyle(fontSize: 11, color: currentSubColor, fontFamily: 'Inter', height: 1.2),
-                        maxLines: 2, overflow: TextOverflow.ellipsis
-                      ),
-                    ),
-                    if (jmlUlasan > 0)
-                      Text(
-                        "$jmlUlasan ulasan",
-                        style: TextStyle(fontSize: 9, color: currentSubColor.withValues(alpha: 0.8), fontStyle: FontStyle.italic),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Center(
+                    child: Icon(Icons.arrow_forward_ios_rounded, color: primaryPine, size: 13),
+                  ),
+                ),
+              ],
             ),
-            
-            // Ikon Panah/Play di Kanan
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: Icon(Icons.play_circle_fill, color: currentIconColor, size: 28),
-            )
-          ],
+          ),
         ),
       ),
     );

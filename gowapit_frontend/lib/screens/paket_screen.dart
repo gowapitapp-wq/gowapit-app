@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../design/tokens.dart';
 import 'booking_screen.dart';
 
 class PaketPage extends StatefulWidget {
@@ -64,8 +65,9 @@ class _PaketPageState extends State<PaketPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color primaryColor = isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
+    final bool isDark = context.isDarkMode;
+    final Color primaryPine = context.primaryAccent;
+    final Color textColor = context.textPrimary;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -73,36 +75,33 @@ class _PaketPageState extends State<PaketPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: primaryColor),
-        title: const Text(
+        title: Text(
           "Paket Wisata",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Montserrat',
-            fontSize: 20,
-          ),
+          style: AppTokens.tagline.copyWith(color: textColor),
         ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          ? Center(child: CircularProgressIndicator(color: primaryPine))
           : _error != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.wifi_off_rounded, size: 48, color: primaryColor.withValues(alpha: 0.5)),
-                      const SizedBox(height: 12),
-                      Text(_error!, style: TextStyle(color: primaryColor, fontFamily: 'Inter')),
-                      const SizedBox(height: 12),
+                      Icon(Icons.wifi_off_rounded, size: 44, color: primaryPine.withValues(alpha: 0.5)),
+                      const SizedBox(height: AppTokens.sSM),
+                      Text(_error!, style: AppTokens.caption.copyWith(color: context.textMuted)),
+                      const SizedBox(height: AppTokens.sSM),
                       TextButton.icon(
                         onPressed: () {
-                          setState(() { _isLoading = true; _error = null; });
-                          _fetchPaketData();
+                          setState(() {
+                            _isLoading = true;
+                            _error = null;
+                          });
+                          _fetchPaketData(forceRefresh: true);
                         },
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
                         label: const Text("Coba Lagi"),
-                        style: TextButton.styleFrom(foregroundColor: primaryColor),
+                        style: TextButton.styleFrom(foregroundColor: primaryPine),
                       ),
                     ],
                   ),
@@ -111,17 +110,17 @@ class _PaketPageState extends State<PaketPage> {
                   ? Center(
                       child: Text(
                         "Data paket wisata kosong.",
-                        style: TextStyle(color: primaryColor, fontFamily: 'Inter'),
+                        style: AppTokens.caption.copyWith(color: context.textMuted),
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG, vertical: AppTokens.sSM),
                       itemCount: _listPaket.length,
                       itemBuilder: (context, index) {
                         final paket = _listPaket[index];
                         return HoverablePaketCard(
                           paket: paket,
-                          isDarkMode: isDarkMode,
+                          isDarkMode: isDark,
                         );
                       },
                     ),
@@ -140,42 +139,33 @@ class HoverablePaketCard extends StatefulWidget {
 }
 
 class _HoverablePaketCardState extends State<HoverablePaketCard> {
-  bool _isHovered = false;
-
-  Color _getPackageThemeColor(String packageName) {
-    final name = packageName.toLowerCase();
-    if (name.contains('platinum')) return const Color(0xFF607D8B);
-    if (name.contains('gold'))     return const Color(0xFFC5A059);
-    if (name.contains('silver'))   return const Color(0xFF9E9E9E);
-    if (name.contains('bronze'))   return const Color(0xFFCD7F32);
-    return widget.isDarkMode ? const Color(0xFF9DC3C2) : const Color(0xFF5E9190);
-  }
+  bool _isPressed = false;
 
   String _formatRupiah(int amount) {
     return "Rp ${amount.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    )}";
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        )}";
   }
 
-  /// Ubah string fasilitas (newline-separated) jadi bullet list widget
   List<Widget> _buildFasilitasList(String fasilitas, Color textColor) {
-    final lines = fasilitas
-        .split('\n')
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty)
-        .toList();
+    final lines = fasilitas.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
     return lines.map((line) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('• ', style: TextStyle(color: textColor, fontFamily: 'Inter', fontSize: 13)),
+            Text('• ', style: TextStyle(color: textColor, fontFamily: AppTokens.fontFamily, fontSize: 13)),
             Expanded(
               child: Text(
                 line,
-                style: TextStyle(fontSize: 13, height: 1.5, color: textColor, fontFamily: 'Inter'),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: textColor,
+                  fontFamily: AppTokens.fontFamily,
+                ),
               ),
             ),
           ],
@@ -190,51 +180,38 @@ class _HoverablePaketCardState extends State<HoverablePaketCard> {
     final int harga = widget.paket['harga'] ?? 0;
     final String fasilitas = widget.paket['fasilitas'] ?? '';
 
-    final Color themeColor = _getPackageThemeColor(nama);
-    final Color defaultCardColor = widget.isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color currentBgColor = _isHovered ? themeColor : defaultCardColor;
-    final Color currentTitleColor = _isHovered ? Colors.white : themeColor;
-    final Color currentTextColor = _isHovered
-        ? Colors.white.withValues(alpha: 0.9)
-        : (widget.isDarkMode ? Colors.grey.shade300 : const Color(0xFF404846));
-    final Color currentDividerColor = _isHovered
-        ? Colors.white.withValues(alpha: 0.3)
-        : (widget.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200);
-    final Color currentBtnBgColor = _isHovered ? Colors.white : themeColor;
-    final Color currentBtnTextColor = _isHovered ? themeColor : Colors.white;
+    final Color primaryPine = context.primaryAccent;
+    final Color cardColor = context.surfaceCard;
+    final Color textColor = context.textPrimary;
+    final Color subTextColor = context.textMuted;
 
-    final List<BoxShadow> ambientShadow = widget.isDarkMode
-        ? []
-        : [BoxShadow(color: themeColor.withValues(alpha: 0.15), blurRadius: 15, offset: const Offset(0, 6))];
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          // Buka BookingScreen dengan paket ini sudah dipilih
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BookingScreen(paket: {
-                'id': widget.paket['id'],
-                'nama': nama,
-                'harga': harga,
-                'fasilitas': fasilitas,
-              }),
-            ),
-          );
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(24),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingScreen(paket: {
+              'id': widget.paket['id'],
+              'nama': nama,
+              'harga': harga,
+              'fasilitas': fasilitas,
+            }),
+          ),
+        );
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 140),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppTokens.sMD),
+          padding: const EdgeInsets.all(AppTokens.sLG),
           decoration: BoxDecoration(
-            color: currentBgColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: ambientShadow,
+            color: cardColor,
+            borderRadius: AppTokens.r18,
+            border: Border.all(color: context.hairlineBorder, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,89 +219,97 @@ class _HoverablePaketCardState extends State<HoverablePaketCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    nama,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: currentTitleColor,
-                      fontFamily: 'Montserrat',
+                  Expanded(
+                    child: Text(
+                      nama,
+                      style: AppTokens.bodyStrong.copyWith(color: textColor, fontSize: 18),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: _isHovered
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : themeColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      color: primaryPine.withValues(alpha: 0.12),
+                      borderRadius: AppTokens.pill,
                     ),
                     child: Text(
                       _formatRupiah(harga),
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: currentTitleColor,
-                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: primaryPine,
+                        fontFamily: AppTokens.fontFamily,
                       ),
                     ),
                   ),
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20.0),
-                child: Divider(color: currentDividerColor, thickness: 1),
+                padding: const EdgeInsets.symmetric(vertical: AppTokens.sMD),
+                child: Divider(color: context.hairlineBorder, thickness: 1),
               ),
               Text(
                 "Fasilitas yang didapat:",
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: currentTextColor,
-                  fontFamily: 'Inter',
-                ),
+                style: AppTokens.captionStrong.copyWith(color: textColor),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTokens.sXS),
               if (fasilitas.isNotEmpty)
-                ..._buildFasilitasList(fasilitas, currentTextColor)
+                ..._buildFasilitasList(fasilitas, subTextColor)
               else
-                Text('-', style: TextStyle(color: currentTextColor, fontFamily: 'Inter')),
-              const SizedBox(height: 24),
-              // Badge "Pilih Tanggal" untuk Platinum
+                Text('-', style: TextStyle(color: subTextColor, fontFamily: AppTokens.fontFamily)),
+              const SizedBox(height: AppTokens.sLG),
               if (nama.toLowerCase().contains('platinum'))
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppTokens.sSM),
                   child: Row(
                     children: [
-                      Icon(Icons.night_shelter_outlined, size: 14, color: currentTextColor.withValues(alpha: 0.7)),
+                      Icon(Icons.night_shelter_outlined, size: 14, color: subTextColor),
                       const SizedBox(width: 6),
                       Text(
                         "Termasuk camping — pilih range tanggal",
-                        style: TextStyle(fontSize: 12, color: currentTextColor.withValues(alpha: 0.8), fontFamily: 'Inter'),
+                        style: AppTokens.finePrint.copyWith(color: subTextColor),
                       ),
                     ],
                   ),
                 ),
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: currentBtnBgColor,
-                    borderRadius: BorderRadius.circular(14),
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryPine,
+                    foregroundColor: widget.isDarkMode ? AppTokens.surfaceBlack : AppTokens.canvas,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
                   ),
-                  child: Center(
-                    child: Text(
-                      "Pilih Paket →",
-                      style: TextStyle(
-                        color: currentBtnTextColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Montserrat',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingScreen(paket: {
+                          'id': widget.paket['id'],
+                          'nama': nama,
+                          'harga': harga,
+                          'fasilitas': fasilitas,
+                        }),
                       ),
-                    ),
+                    );
+                  },
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Pilih Paket",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: AppTokens.fontFamily,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      SizedBox(width: AppTokens.sXS),
+                      Icon(Icons.arrow_forward_rounded, size: 16),
+                    ],
                   ),
                 ),
               ),

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
-import 'package:crypto/crypto.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
-import 'dart:async'; // Diperlukan untuk Timer Carousel
+import 'dart:async';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../config/map_config.dart';
+import '../auth/auth_service.dart';
+import '../design/tokens.dart';
 import 'cuaca_screen.dart';
 import 'destinasi_screen.dart';
 import 'detail_destinasi_screen.dart';
@@ -36,11 +37,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
   String _namaPengguna = "Petualang";
   String _email = "";
   String _fotoProfil = "";
-  
+
   // Variabel Destinasi Populer
   List<dynamic> _popularDestinasi = [];
   List<dynamic> _allDestinasi = [];
   bool _isLoadingDestinasi = true;
+  Position? _userPosition;
 
   // Variabel Carousel Berita
   final PageController _pageController = PageController();
@@ -53,7 +55,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     _fetchWeatherData();
     _fetchUserData();
     _fetchDestinasiData();
-    
+    _getUserLocation();
+
     // Setup Auto-Scroll Carousel
     _carouselTimer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
       if (_currentPage < 2) {
@@ -62,7 +65,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
         _currentPage = 0;
       }
       if (_pageController.hasClients) {
-        _pageController.animateToPage(_currentPage, duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOutCubic,
+        );
       }
     });
   }
@@ -72,6 +79,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
     _carouselTimer?.cancel();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _getUserLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+
+      if (mounted) {
+        setState(() => _userPosition = position);
+      }
+    } catch (_) {}
   }
 
   // --- API DESTINASI POPULER LOGIC WITH CLIENT CACHE ---
@@ -115,8 +147,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // --- API USER LOGIC WITH CLIENT CACHE ---
   Future<void> _fetchUserData({bool forceRefresh = false}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final token = await AuthService.instance.getToken();
 
     if (token == null) {
       if (mounted) setState(() => _namaPengguna = "Petualang");
@@ -124,36 +155,50 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
 
     try {
-      final cached = ApiCache.instance.get("user_profile");
+      final cached = ApiCache.instance.get("user_me");
       if (cached is Map && !forceRefresh) {
         _applyUserData(cached);
       }
 
       final data = await ApiCache.instance.getOrFetch(
-        cacheKey: "user_profile",
+        cacheKey: "user_me",
         uri: ApiConfig.uri("/api/users/me"),
         headers: {"Authorization": "Bearer $token"},
-        ttl: ApiCache.userProfileTTL,
+        ttl: ApiCache.userTTL,
         forceRefresh: forceRefresh,
       );
 
       if (data is Map && mounted) {
         _applyUserData(data);
-      } else {
-        if (mounted) setState(() => _namaPengguna = "Petualang");
       }
     } catch (e) {
-      if (mounted) setState(() => _namaPengguna = "Petualang");
+      debugPrint("Gagal mengambil data user me: $e");
     }
   }
 
   void _applyUserData(Map data) {
+    final userData = data['data'] ?? data;
     setState(() {
-      String namaLengkap = data['nama_lengkap'] ?? 'Petualang';
-      _namaPengguna = namaLengkap.split(' ')[0];
-      _email = data['email'] ?? '';
-      _fotoProfil = data['foto_profil'] ?? '';
+      _namaPengguna = userData['nama_lengkap'] ?? userData['name'] ?? "Petualang";
+      _email = userData['email'] ?? "";
+      _fotoProfil = userData['foto_profil'] ?? "";
     });
+  }
+
+  String _dapatkanUrlAvatarEmail(String email, String nama) {
+    final namaBersih = Uri.encodeComponent(nama.isNotEmpty ? nama : "Wapit");
+    return "https://ui-avatars.com/api/?name=$namaBersih&background=1E524D&color=ffffff&size=256&bold=true";
+  }
+
+  String _getInitials(String text) {
+    if (text.isEmpty || text == "Petualang") return "GW";
+    List<String> parts = text.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return "${parts[0][0]}${parts[1][0]}".toUpperCase();
+    }
+    String clean = text.split('@')[0];
+    if (clean.length >= 2) return clean.substring(0, 2).toUpperCase();
+    return clean.substring(0, 1).toUpperCase();
   }
 
   ImageProvider? _getAvatarImageProvider() {
@@ -167,21 +212,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return NetworkImage(_fotoProfil);
       }
     }
-    if (_email.isNotEmpty) {
-      return NetworkImage(_dapatkanUrlGravatar(_email));
-    }
-    return const AssetImage('assets/images/default_avatar.png');
-  }
 
-  String _dapatkanUrlGravatar(String email) {
-    String cleanEmail = email.trim().toLowerCase();
-    String md5Hash = md5.convert(utf8.encode(cleanEmail)).toString();
-    return "https://www.gravatar.com/avatar/$md5Hash?d=identicon&s=200";
+    final fbPhoto = AuthService.instance.currentUser?.photoURL;
+    if (fbPhoto != null && fbPhoto.isNotEmpty) {
+      return NetworkImage(fbPhoto);
+    }
+
+    if (_email.isNotEmpty) {
+      return NetworkImage(_dapatkanUrlAvatarEmail(_email, _namaPengguna));
+    }
+    return const NetworkImage("https://ui-avatars.com/api/?name=Wapit&background=1E524D&color=ffffff&size=256&bold=true");
   }
 
   // --- API CUACA LOGIC WITH CLIENT CACHE ---
   Future<void> _fetchWeatherData({bool forceRefresh = false}) async {
-    const String apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=-7.2558&longitude=110.0183&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,rain,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation,rain,apparent_temperature,precipitation_probability,weather_code,wind_speed_80m,wind_direction_10m,wind_gusts_10m,temperature_80m,uv_index_clear_sky,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_clear_sky_max&timezone=auto";
+    const String apiUrl =
+        "https://api.open-meteo.com/v1/forecast?latitude=-7.2558&longitude=110.0183&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,rain,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation,rain,apparent_temperature,precipitation_probability,weather_code,wind_speed_80m,wind_direction_10m,wind_gusts_10m,temperature_80m,uv_index_clear_sky,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_clear_sky_max&timezone=auto";
     try {
       final cached = ApiCache.instance.get("weather_open_meteo");
       if (cached is Map && !forceRefresh) {
@@ -229,7 +275,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   IconData _getWeatherIcon(int code, bool isDay) {
-    if (code == 0) return isDay ? Icons.wb_sunny : Icons.nightlight_round;
+    if (code == 0) return isDay ? Icons.wb_sunny_rounded : Icons.nightlight_round;
     if (code >= 51 && code <= 67) return Icons.water_drop_outlined;
     return Icons.cloud_outlined;
   }
@@ -246,31 +292,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color cardColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF121E1C);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5D5A);
-    final Color primaryColor = isDarkMode ? const Color(0xFF76B3AC) : const Color(0xFF1E524D);
-    const Color secondaryColor = Color(0xFF2E7D6A);
-    
-    final List<BoxShadow> ambientShadow = isDarkMode ? [] : [
-      BoxShadow(color: const Color(0xFF1E524D).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))
-    ];
+    final bool isDark = context.isDarkMode;
+    final Color cardColor = context.surfaceCard;
+    final Color textColor = context.textPrimary;
+    final Color subTextColor = context.textMuted;
+    final Color primaryPine = context.primaryAccent;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: primaryColor,
+          color: primaryPine,
           onRefresh: () async {
-            await _fetchWeatherData();
-            await _fetchUserData();
-            await _fetchDestinasiData();
+            await _fetchWeatherData(forceRefresh: true);
+            await _fetchUserData(forceRefresh: true);
+            await _fetchDestinasiData(forceRefresh: true);
           },
           child: ListView(
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 15, bottom: 120),
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 120),
             children: [
-              // --- 1. HEADER (TERINTEGRASI API USER) ---
+              // --- 1. HEADER USER & CUACA MINI PILL ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -279,251 +321,321 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: primaryColor.withValues(alpha: 0.35),
-                            width: 2,
-                          ),
+                          border: Border.all(color: context.hairlineBorder, width: 1.5),
                         ),
                         child: CircleAvatar(
                           radius: 20,
-                          backgroundColor: primaryColor.withValues(alpha: 0.2),
+                          backgroundColor: primaryPine.withValues(alpha: 0.15),
                           backgroundImage: _getAvatarImageProvider(),
+                          child: Text(
+                            _getInitials(_namaPengguna),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: primaryPine,
+                              fontFamily: AppTokens.fontFamily,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppTokens.sSM),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Welcome Back,", style: TextStyle(fontSize: 11, color: subTextColor, fontWeight: FontWeight.w500)),
-                          Text(_namaPengguna, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor, fontFamily: 'Montserrat')),
+                          Text(
+                            "Selamat Datang,",
+                            style: AppTokens.finePrint.copyWith(color: subTextColor),
+                          ),
+                          Text(
+                            _namaPengguna,
+                            style: AppTokens.bodyStrong.copyWith(color: textColor),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(16)),
-                    child: Row(
-                      children: [
-                        Icon(_weatherIcon, color: Colors.white, size: 14),
-                        const SizedBox(width: 6),
-                        Text(_isLoadingWeather ? "--" : _currentTemp, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                      ],
+
+                  // Weather Mini Capsule
+                  GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CuacaScreen())),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTokens.surfaceTile2 : AppTokens.canvasParchment,
+                        borderRadius: AppTokens.pill,
+                        border: Border.all(color: context.hairlineBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(_weatherIcon, color: primaryPine, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isLoadingWeather ? "--" : _currentTemp,
+                            style: AppTokens.captionStrong.copyWith(color: textColor),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppTokens.sLG),
 
-              // --- 2. SEARCH BAR ---
+              // --- 2. SEARCH INPUT PILL ---
               GestureDetector(
                 onTap: () async {
                   await Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen()));
                   _fetchDestinasiData();
                 },
                 child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: ambientShadow,
-                    border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE2E8F0)),
+                    color: isDark ? AppTokens.surfaceTile1 : AppTokens.canvas,
+                    borderRadius: AppTokens.pill,
+                    border: Border.all(color: context.hairlineBorder, width: 1),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: primaryColor, size: 20),
-                      const SizedBox(width: 12),
-                      Text("Cari destinasi, tiket, atau kuliner...", style: TextStyle(color: subTextColor, fontSize: 13)),
+                      Icon(Icons.search_rounded, color: primaryPine, size: 18),
+                      const SizedBox(width: AppTokens.sSM),
+                      Text(
+                        "Cari destinasi, wahana, atau kuliner...",
+                        style: AppTokens.caption.copyWith(color: subTextColor),
+                      ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppTokens.sLG),
 
-              // --- 3. CAROUSEL BERITA / PROMO ---
+              // --- 3. CAROUSEL BERITA / PROMO HERO TILES ---
               SizedBox(
-                height: 170, // Tinggi area carousel
+                height: 165,
                 child: PageView(
                   controller: _pageController,
                   onPageChanged: (int page) {
-                    setState(() { _currentPage = page; });
+                    setState(() {
+                      _currentPage = page;
+                    });
                   },
                   children: [
                     _buildPromoCard(
-                      "Promo", 
-                      "Diskon 30% Tiket Masuk", 
-                      "Berlaku untuk kunjungan akhir pekan ini. Jangan sampai kehabisan!", 
-                      primaryColor, 
-                      isDarkMode, 
-                      ambientShadow,
-                      'assets/images/BeritaDiskon.png'
+                      "Promo",
+                      "Diskon 30% Tiket Masuk",
+                      "Berlaku untuk kunjungan akhir pekan ini di Hutan Pinus Wapit.",
+                      primaryPine,
+                      isDark,
+                      'assets/images/BeritaDiskon.png',
                     ),
                     _buildPromoCard(
-                      "Event", 
-                      "Festival Kopi Temanggung", 
-                      "Nikmati seduhan kopi Arabika gratis dari petani lokal Jumprit.", 
-                      const Color(0xFF44634e), 
-                      isDarkMode, 
-                      ambientShadow,
-                      'assets/images/BeritaFestivalKopi.png'
+                      "Event",
+                      "Festival Kopi Temanggung",
+                      "Nikmati seduhan kopi Arabika gratis dari petani lokal lereng Sindoro.",
+                      AppTokens.statusAmber,
+                      isDark,
+                      'assets/images/BeritaFestivalKopi.png',
                     ),
                     _buildPromoCard(
-                      "Info", 
-                      "Wahana High Rope Dibuka!", 
-                      "Uji adrenalinmu di wahana terbaru Hutan Pinus Wapit.", 
-                      const Color(0xFFD32F2F), 
-                      isDarkMode, 
-                      ambientShadow,
-                      'assets/images/HighRope.jpg'
+                      "Informasi",
+                      "Wahana High Rope & Flying Fox",
+                      "Uji adrenalinmu di wahana petualangan seru standar internasional.",
+                      primaryPine,
+                      isDark,
+                      'assets/images/HighRope.jpg',
                     ),
                   ],
                 ),
               ),
-              
+
               // Titik Indikator Carousel
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTokens.sSM),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 6,
-                  width: _currentPage == index ? 20 : 6,
-                  decoration: BoxDecoration(
-                    color: _currentPage == index ? primaryColor : primaryColor.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(10),
+                children: List.generate(
+                  3,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    height: 5,
+                    width: _currentPage == index ? 18 : 5,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? primaryPine : primaryPine.withValues(alpha: 0.25),
+                      borderRadius: AppTokens.pill,
+                    ),
                   ),
-                )),
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppTokens.sLG),
 
-              // --- 4. MENU IKON (SCROLL HORIZONTAL) ---
+              // --- 4. MENU QUICK ACTION (HORIZONTAL PILL / SQUARES) ---
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _buildMenuIcon(Icons.landscape, "Destinasi", cardColor, primaryColor, textColor, ambientShadow, () async {
+                    _buildMenuIcon(Icons.landscape_outlined, "Destinasi", cardColor, primaryPine, textColor, () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage()));
                       _fetchDestinasiData();
                     }),
-                    const SizedBox(width: 16),
-                    _buildMenuIcon(Icons.restaurant, "Kuliner", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()))),
-                    const SizedBox(width: 16),
-                    _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()))),
-                    const SizedBox(width: 16),
-                    _buildMenuIcon(Icons.support_agent, "Layanan", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()))),
-                    const SizedBox(width: 16),
-                    _buildMenuIcon(Icons.photo_library_rounded, "Galeri", cardColor, primaryColor, textColor, ambientShadow, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GaleriScreen()))),
+                    const SizedBox(width: AppTokens.sSM),
+                    _buildMenuIcon(Icons.restaurant_menu_outlined, "Kuliner", cardColor, primaryPine, textColor, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const KulinerPage()));
+                    }),
+                    const SizedBox(width: AppTokens.sSM),
+                    _buildMenuIcon(Icons.confirmation_number_outlined, "Tiket", cardColor, primaryPine, textColor, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingScreen()));
+                    }),
+                    const SizedBox(width: AppTokens.sSM),
+                    _buildMenuIcon(Icons.support_agent_outlined, "Layanan", cardColor, primaryPine, textColor, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const LayananUmumPage()));
+                    }),
+                    const SizedBox(width: AppTokens.sSM),
+                    _buildMenuIcon(Icons.photo_library_outlined, "Galeri", cardColor, primaryPine, textColor, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const GaleriScreen()));
+                    }),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppTokens.sXL),
 
-            // --- 5. WIDGET CUACA KACA ---
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CuacaScreen()),
-                );
-              },
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: ambientShadow,
-                border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(color: const Color(0xFFE6F2DD), borderRadius: BorderRadius.circular(12)),
-                    child: Lottie.asset(
-                      _weatherLottie,
-                      fit: BoxFit.contain,
-                      errorBuilder: (c, e, s) => Icon(_weatherIcon, size: 28, color: primaryColor),
-                    ),
+              // --- 5. WIDGET CUACA APPLE UTILITY CARD ---
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const CuacaScreen()));
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(AppTokens.sMD),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTokens.surfaceTile1 : AppTokens.canvasParchment,
+                    borderRadius: AppTokens.r18,
+                    border: Border.all(color: context.hairlineBorder, width: 1),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Cuaca di Jumprit", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Montserrat')),
-                        const SizedBox(height: 4),
-                        Text(_weatherDesc, style: TextStyle(fontSize: 13, color: subTextColor)),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Row(
                     children: [
-                      Text(_isLoadingWeather ? "--" : _currentTemp, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Montserrat')),
-                      Text("Terasa ${_isLoadingWeather ? "--" : _feelsLike}", style: TextStyle(fontSize: 11, color: subTextColor)),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: primaryPine.withValues(alpha: 0.12),
+                          borderRadius: AppTokens.r11,
+                        ),
+                        child: Lottie.asset(
+                          _weatherLottie,
+                          fit: BoxFit.contain,
+                          errorBuilder: (c, e, s) => Icon(_weatherIcon, size: 24, color: primaryPine),
+                        ),
+                      ),
+                      const SizedBox(width: AppTokens.sMD),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Cuaca di Umbul Jumprit", style: AppTokens.bodyStrong.copyWith(color: textColor)),
+                            const SizedBox(height: 2),
+                            Text(_weatherDesc, style: AppTokens.caption.copyWith(color: subTextColor)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _isLoadingWeather ? "--" : _currentTemp,
+                            style: AppTokens.tagline.copyWith(color: primaryPine, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            "Terasa ${_isLoadingWeather ? "--" : _feelsLike}",
+                            style: AppTokens.microLegal.copyWith(color: subTextColor),
+                          ),
+                        ],
+                      )
                     ],
-                  )
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppTokens.sXL),
+
+              // --- 6. DESTINASI POPULER (PHOTOGRAPHY-FIRST UTILITY CARDS) ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Destinasi Populer",
+                    style: AppTokens.tagline.copyWith(color: textColor),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DestinasiPage())),
+                    child: Text("Lihat Semua", style: AppTokens.caption.copyWith(color: primaryPine, fontWeight: FontWeight.w600)),
+                  ),
                 ],
               ),
-            ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: AppTokens.sSM),
+              if (_isLoadingDestinasi)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTokens.sXL),
+                    child: CircularProgressIndicator(color: primaryPine),
+                  ),
+                )
+              else if (_popularDestinasi.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(AppTokens.sLG),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: AppTokens.r18,
+                    border: Border.all(color: context.hairlineBorder),
+                  ),
+                  child: Center(child: Text("Belum ada destinasi.", style: TextStyle(color: subTextColor))),
+                )
+              else
+                Column(
+                  children: _popularDestinasi.map((item) {
+                    final String title = item['name'] ?? item['nama'] ?? 'Destinasi Wapit';
+                    final num ratingNum = (item['rating'] is num) ? item['rating'] : 0.0;
+                    final String ratingStr = ratingNum > 0 ? ratingNum.toStringAsFixed(1) : "Baru";
+                    final String description = item['deskripsi_pendek'] ?? item['deskripsi_panjang'] ?? item['deskripsi_singkat'] ?? '-';
+                    String rawGambar = item['image'] ?? item['gambar'] ?? 'assets/images/placeholder.jpeg';
+                    final String imagePath = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
 
-            // --- 6. DESTINASI POPULER (VERTIKAL) ---
-            Text("Destinasi Populer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor, fontFamily: 'Montserrat')),
-            const SizedBox(height: 16),
-            if (_isLoadingDestinasi)
-              Center(child: Padding(padding: const EdgeInsets.all(24.0), child: CircularProgressIndicator(color: primaryColor)))
-            else if (_popularDestinasi.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: ambientShadow),
-                child: Center(child: Text("Belum ada destinasi.", style: TextStyle(color: subTextColor))),
-              )
-            else
-              Column(
-                children: _popularDestinasi.map((item) {
-                  final String title = item['name'] ?? item['nama'] ?? 'Destinasi Wapit';
-                  final num ratingNum = (item['rating'] is num) ? item['rating'] : 0.0;
-                  final String ratingStr = ratingNum > 0 ? ratingNum.toStringAsFixed(1) : "Baru";
-                  final String description = item['deskripsi_pendek'] ?? item['deskripsi_panjang'] ?? item['deskripsi_singkat'] ?? '-';
-                  String rawGambar = item['image'] ?? item['gambar'] ?? 'assets/images/placeholder.jpeg';
-                  final String imagePath = rawGambar.startsWith('assets/') ? rawGambar : 'assets/$rawGambar';
+                    double? distKm;
+                    if (_userPosition != null && item['latitude'] != null && item['longitude'] != null) {
+                      double? lat = double.tryParse(item['latitude'].toString());
+                      double? lon = double.tryParse(item['longitude'].toString());
+                      if (lat != null && lon != null) {
+                        distKm = MapConfig.haversineDistanceKm(_userPosition!.latitude, _userPosition!.longitude, lat, lon);
+                      }
+                    }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: _buildPopularCardVertical(
-                      title,
-                      ratingStr,
-                      description,
-                      imagePath,
-                      cardColor,
-                      textColor,
-                      subTextColor,
-                      primaryColor,
-                      secondaryColor,
-                      ambientShadow,
-                      () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetailDestinasiPage(
-                              data: item,
-                              allDestinasi: _allDestinasi,
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppTokens.sMD),
+                      child: _buildPopularCardVertical(
+                        title: title,
+                        rating: ratingStr,
+                        description: description,
+                        imagePath: imagePath,
+                        cardColor: cardColor,
+                        textColor: textColor,
+                        subTextColor: subTextColor,
+                        primaryColor: primaryPine,
+                        distKm: distKm,
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailDestinasiPage(
+                                data: item,
+                                allDestinasi: _allDestinasi,
+                              ),
                             ),
-                          ),
-                        );
-                        _fetchDestinasiData();
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
+                          );
+                          _fetchDestinasiData();
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
             ],
           ),
         ),
@@ -531,66 +643,82 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  // --- WIDGET BUILDER ---
+  // --- WIDGET BUILDERS ---
 
-Widget _buildPromoCard(String tag, String title, String description, Color color, bool isDarkMode, List<BoxShadow> ambientShadow, String imagePath) {
+  Widget _buildPromoCard(
+    String tag,
+    String title,
+    String description,
+    Color color,
+    bool isDark,
+    String imagePath,
+  ) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: ambientShadow,
-        border: Border.all(color: isDarkMode ? Colors.grey.shade800 : const Color(0xFFE5EBE8)),
-        // --- MEMASANG GAMBAR SEBAGAI BACKGROUND ---
+        borderRadius: AppTokens.r18,
+        border: Border.all(color: context.hairlineBorder, width: 1),
         image: DecorationImage(
           image: AssetImage(imagePath),
           fit: BoxFit.cover,
-          // Fallback warna jika gambar gagal dimuat sementara
-          colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.2), BlendMode.darken),
+          colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.25), BlendMode.darken),
         ),
       ),
       child: Container(
-        // --- GRADIENT OVERLAY AGAR TEKS TETAP TERBACA JELAS ---
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppTokens.r18,
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withValues(alpha: 0.8), // Gelap di bagian bawah (tempat teks)
-              Colors.transparent, // Transparan di bagian atas
+              Colors.black.withValues(alpha: 0.85),
+              Colors.transparent,
             ],
           ),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppTokens.sMD),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end, // Mendorong teks ke bawah
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // Tag (Label Promo/Event)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppTokens.pill,
               ),
               child: Text(
                 tag,
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: AppTokens.fontFamily,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            // Judul Promo
+            const SizedBox(height: 6),
             Text(
               title,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Montserrat'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: AppTokens.fontFamily,
+                letterSpacing: -0.2,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            // Deskripsi Promo
+            const SizedBox(height: 2),
             Text(
               description,
-              style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'Inter'),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
+                fontFamily: AppTokens.fontFamily,
+                height: 1.4,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -600,35 +728,41 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
     );
   }
 
-  Widget _buildMenuIcon(IconData icon, String label, Color cardColor, Color primaryColor, Color textColor, List<BoxShadow> shadow, VoidCallback onTap) {
+  Widget _buildMenuIcon(
+    IconData icon,
+    String label,
+    Color cardColor,
+    Color primaryColor,
+    Color textColor,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 68,
+        width: 66,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 58,
-              height: 58,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: shadow,
+                borderRadius: AppTokens.r18,
+                border: Border.all(color: context.hairlineBorder, width: 1),
               ),
               child: Center(
-                child: Icon(icon, color: primaryColor, size: 26),
+                child: Icon(icon, color: primaryColor, size: 22),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: AppTokens.caption.copyWith(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
                 color: textColor,
-                fontFamily: 'Inter',
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -639,35 +773,33 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
     );
   }
 
-  // Desain Kartu Populer Diubah Menjadi Vertikal Penuh
-  Widget _buildPopularCardVertical(
-    String title,
-    String rating,
-    String description,
-    String imagePath,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-    Color primaryColor,
-    Color secondaryColor,
-    List<BoxShadow> shadow,
-    VoidCallback onTap,
-  ) {
+  Widget _buildPopularCardVertical({
+    required String title,
+    required String rating,
+    required String description,
+    required String imagePath,
+    required Color cardColor,
+    required Color textColor,
+    required Color subTextColor,
+    required Color primaryColor,
+    required double? distKm,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: shadow,
-          border: Border.all(color: const Color(0xFFE5EBE8)),
+          borderRadius: AppTokens.r18,
+          border: Border.all(color: context.hairlineBorder, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Gambar dengan soft product shadow
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
               child: Image.asset(
                 imagePath,
                 height: 160,
@@ -675,13 +807,13 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
                 fit: BoxFit.cover,
                 errorBuilder: (c, e, s) => Container(
                   height: 160,
-                  color: Colors.grey.shade300,
-                  child: const Icon(Icons.image, color: Colors.grey),
+                  color: context.surfaceParchment,
+                  child: Icon(Icons.image_outlined, color: subTextColor),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppTokens.sMD),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -691,27 +823,73 @@ Widget _buildPromoCard(String tag, String title, String description, Color color
                       Expanded(
                         child: Text(
                           title,
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor, fontFamily: 'Montserrat'),
+                          style: AppTokens.bodyStrong.copyWith(color: textColor, fontSize: 17),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(rating, style: TextStyle(fontSize: 14, color: subTextColor, fontWeight: FontWeight.bold)),
-                        ],
+                      const SizedBox(width: AppTokens.sXS),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTokens.statusAmber.withValues(alpha: 0.15),
+                          borderRadius: AppTokens.pill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: AppTokens.statusAmber, size: 14),
+                            const SizedBox(width: 3),
+                            Text(
+                              rating,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppTokens.statusAmber,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: AppTokens.fontFamily,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    description, 
-                    style: TextStyle(fontSize: 13, height: 1.5, color: subTextColor), 
+                    description,
+                    style: AppTokens.caption.copyWith(color: subTextColor, height: 1.45),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (distKm != null) ...[
+                    const SizedBox(height: AppTokens.sSM),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.10),
+                        borderRadius: AppTokens.pill,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.near_me_rounded, size: 12, color: primaryColor),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              "${MapConfig.formatDistance(distKm)} (${MapConfig.estimateDuration(distKm)})",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                                fontFamily: AppTokens.fontFamily,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

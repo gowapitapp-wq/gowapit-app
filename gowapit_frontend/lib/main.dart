@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'auth/auth_service.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/profil_screen.dart'; // Sesuaikan nama file jika berbeda
@@ -9,13 +13,23 @@ import 'theme_notifier.dart';
 import 'screens/peta_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/tiket_screen.dart';
+import 'screens/berita_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'widgets/floating_dock.dart';
 import 'config/api_cache.dart';
+import 'config/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase init: $e");
+  }
   await ApiCache.instance.init();
   runApp(
     EasyLocalization(
@@ -100,61 +114,8 @@ class GoWapitApp extends StatelessWidget {
             );
           },
 
-          // --- TEMA TERANG ---
-          theme: ThemeData(
-            brightness: Brightness.light,
-            fontFamily: 'Inter',
-            scaffoldBackgroundColor: Colors.transparent, 
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              centerTitle: true,
-              foregroundColor: Color(0xFF121E1C),
-              titleTextStyle: TextStyle(
-                color: Color(0xFF121E1C),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Montserrat',
-              ),
-            ),
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E524D), // Deep Forest Pine
-              secondary: Color(0xFF2E7D6A), // Emerald Pine Accent
-              tertiary: Color(0xFFE59819), // Golden Amber
-              surface: Color(0xFFFFFFFF),
-              onSurface: Color(0xFF121E1C),
-              onPrimary: Colors.white,
-            ),
-            useMaterial3: true,
-          ),
-
-          // --- TEMA GELAP ---
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            fontFamily: 'Inter',
-            scaffoldBackgroundColor: Colors.transparent,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              centerTitle: true,
-              foregroundColor: Colors.white,
-              titleTextStyle: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Montserrat',
-              ),
-            ),
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF76B3AC),
-              secondary: Color(0xFF8FD4C1),
-              tertiary: Color(0xFFFDBB2D),
-              surface: Color(0xFF1A2420),
-              onPrimary: Color(0xFF121E1C),
-            ),
-            useMaterial3: true,
-          ),
-
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           home: const SplashScreen(),
         );
       },
@@ -178,13 +139,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkLoginSession() async {
+    final user = AuthService.instance.currentUser;
+    String? role;
+    if (user != null) {
+      final syncRes = await AuthService.instance.ensureBackendSynced();
+      role = syncRes.role;
+    }
     final prefs = await SharedPreferences.getInstance();
-    final String? token = prefs.getString('jwt_token');
-    final String? role = prefs.getString('user_role');
+    role = role ?? prefs.getString('user_role');
 
-    Timer(const Duration(milliseconds: 2000), () {
+    Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-      if (token != null && token.isNotEmpty) {
+      if (AuthService.instance.currentUser != null) {
         // Jika akun ber-role Petugas, langsung ke halaman Scanner Petugas (tanpa dock)
         if (role == 'petugas' || role == 'staff') {
           Navigator.pushReplacement(
@@ -245,6 +211,7 @@ class _MainNavigatorState extends State<MainNavigator> {
     const HomeDashboard(),
     const TiketPage(),
     const PetaScreen(),
+    const BeritaKegiatanPage(),
     const ProfilPage(),
   ];
 
@@ -286,6 +253,11 @@ class _MainNavigatorState extends State<MainNavigator> {
                 icon: Icons.map_outlined,
                 activeIcon: Icons.map_rounded,
                 label: 'Peta',
+              ),
+              DockItem(
+                icon: Icons.newspaper_outlined,
+                activeIcon: Icons.newspaper_rounded,
+                label: 'Berita',
               ),
               DockItem(
                 icon: Icons.person_outline_rounded,

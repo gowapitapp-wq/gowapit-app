@@ -3,6 +3,7 @@ import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import '../widgets/onboarding_fx.dart';
+import '../design/tokens.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,8 +20,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   late AnimationController _entranceController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  late AnimationController _buttonPulseController;
 
   final List<Map<String, String>> _slides = [
     {
@@ -46,12 +45,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     },
   ];
 
-  final List<Color> _accentColors = const [
-    Color(0xFF5E9190), // Light Blue tint
-    Color(0xFFB3D89C), // Celadon
-    Color(0xFF88BDA4), // Soft Sage
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -66,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -74,16 +67,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.25),
+      begin: const Offset(0.0, 0.15),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
     );
-
-    _buttonPulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
 
     _entranceController.forward();
   }
@@ -92,7 +80,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   void dispose() {
     _pageController.dispose();
     _entranceController.dispose();
-    _buttonPulseController.dispose();
     super.dispose();
   }
 
@@ -112,7 +99,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
+        transitionDuration: const Duration(milliseconds: 400),
         pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -125,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     if (_currentPage < _slides.length - 1) {
       _pageController.animateToPage(
         _currentPage + 1,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 450),
         curve: Curves.easeInOutCubic,
       );
     } else {
@@ -135,23 +122,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF161d1b);
-    final Color subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF4A5552);
-    final Color currentAccent = _accentColors[_currentPage];
+    final bool isDark = context.isDarkMode;
+    final Color primaryPine = context.primaryAccent;
+    final Color textColor = context.textPrimary;
+    final Color subTextColor = context.textMuted;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: isDark ? AppTokens.surfaceBlack : AppTokens.canvas,
       body: Stack(
         children: [
           // 1. LAYER PARALLAX BACKGROUND
           ParallaxBackground(
             pageOffset: _pageOffset,
-            isDarkMode: isDarkMode,
+            isDarkMode: isDark,
           ),
 
           // 2. LAYER AMBIENT PARTICLES
-          ParticleLayer(isDarkMode: isDarkMode),
+          ParticleLayer(isDarkMode: isDark),
 
           // 3. MAIN CONTENT (PAGEVIEW)
           SafeArea(
@@ -159,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
               children: [
                 // Top Bar: Logo + Skip Button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG, vertical: AppTokens.sSM),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -169,33 +156,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppTokens.canvas,
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              border: Border.all(color: context.hairlineBorder),
                             ),
                             child: Image.asset(
                               'assets/images/Logo.png',
                               width: 22,
                               height: 22,
                               errorBuilder: (context, error, stackTrace) =>
-                                  Icon(Icons.park_rounded, color: currentAccent, size: 20),
+                                  Icon(Icons.park_rounded, color: primaryPine, size: 20),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: AppTokens.sXS),
                           const Text(
                             "Go Wapit",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              fontFamily: 'Montserrat',
-                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: AppTokens.fontFamily,
+                              letterSpacing: -0.2,
                             ),
                           ),
                         ],
@@ -206,19 +187,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                         TextButton(
                           onPressed: _finishOnboarding,
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.white.withValues(alpha: 0.9),
-                            backgroundColor: Colors.black.withValues(alpha: 0.15),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            foregroundColor: Colors.white.withValues(alpha: 0.95),
+                            backgroundColor: Colors.black.withValues(alpha: 0.25),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
                           ),
                           child: const Text(
                             "Lewati",
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
+                              fontFamily: AppTokens.fontFamily,
                             ),
                           ),
                         )
@@ -236,10 +215,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                     itemCount: _slides.length,
                     itemBuilder: (context, index) {
                       final slide = _slides[index];
-                      final Color slideColor = _accentColors[index];
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -248,7 +226,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                             // Interactive Illustration with TapBurst
                             TapBurst(
                               factText: slide['fact']!,
-                              accentColor: slideColor,
+                              accentColor: primaryPine,
                               child: Container(
                                 height: 260,
                                 width: double.infinity,
@@ -269,25 +247,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                                     Text(
                                       slide['title']!,
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w900,
+                                      style: AppTokens.displayMd.copyWith(
                                         color: textColor,
-                                        fontFamily: 'Montserrat',
-                                        height: 1.25,
                                       ),
                                     ),
-                                    const SizedBox(height: 14),
+                                    const SizedBox(height: AppTokens.sSM),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.sMD),
                                       child: Text(
                                         slide['subtitle']!,
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 14,
+                                        style: AppTokens.body.copyWith(
                                           color: subTextColor,
-                                          fontFamily: 'Inter',
-                                          height: 1.5,
                                         ),
                                       ),
                                     ),
@@ -306,98 +277,80 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
                 // Bottom Area: Indicators & Navigation Button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.sLG, vertical: AppTokens.sLG),
                   child: Column(
                     children: [
-                      // Animated Dots Indicator
+                      // Dots Indicator Pill
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(_slides.length, (index) {
                           final bool isActive = _currentPage == index;
                           return AnimatedContainer(
-                            duration: const Duration(milliseconds: 350),
+                            duration: const Duration(milliseconds: 300),
                             curve: Curves.easeOutCubic,
                             margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                            height: 7,
-                            width: isActive ? 26 : 7,
+                            height: 6,
+                            width: isActive ? 24 : 6,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? currentAccent
-                                  : (isDarkMode
-                                      ? Colors.grey.shade700
-                                      : currentAccent.withValues(alpha: 0.25)),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: isActive
-                                  ? [
-                                      BoxShadow(
-                                        color: currentAccent.withValues(alpha: 0.4),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ]
-                                  : [],
+                                  ? primaryPine
+                                  : (isDark
+                                      ? Colors.grey.shade800
+                                      : AppTokens.hairlineLight),
+                              borderRadius: AppTokens.pill,
                             ),
                           );
                         }),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: AppTokens.sXL),
 
-                      // Action Button (Lanjut / Mulai Petualangan)
-                      AnimatedBuilder(
-                        animation: _buttonPulseController,
-                        builder: (context, child) {
-                          final isLast = _currentPage == _slides.length - 1;
-                          return ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isDarkMode
-                                  ? currentAccent
-                                  : (isLast ? const Color(0xFF161d1b) : currentAccent),
-                              foregroundColor: Colors.white,
-                              elevation: isLast ? 4 : 0,
-                              shadowColor: currentAccent.withValues(alpha: 0.5),
-                              minimumSize: const Size(double.infinity, 56),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                      // Action Button (Lanjut / Mulai Petualangan) — Signature Pill Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryPine,
+                            foregroundColor: isDark ? AppTokens.surfaceBlack : AppTokens.canvas,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: AppTokens.pill),
+                          ),
+                          onPressed: _nextPage,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _currentPage == _slides.length - 1 ? "Mulai Petualangan" : "Lanjut",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: AppTokens.fontFamily,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
-                            ),
-                            onPressed: _nextPage,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  isLast ? "Mulai Petualangan" : "Lanjut",
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Inter',
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  isLast ? Icons.explore_rounded : Icons.arrow_forward_rounded,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                              const SizedBox(width: AppTokens.sXS),
+                              Icon(
+                                _currentPage == _slides.length - 1
+                                    ? Icons.explore_rounded
+                                    : Icons.arrow_forward_rounded,
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: AppTokens.sMD),
 
-                      // Terms & Privacy Text (Only on last slide)
+                      // Terms & Privacy Text
                       AnimatedOpacity(
                         duration: const Duration(milliseconds: 300),
                         opacity: _currentPage == _slides.length - 1 ? 1.0 : 0.0,
                         child: Text(
-                          "Dengan melanjutkan, Anda menyetujui\nSyarat Layanan dan Kebijakan Privasi kami",
+                          "Dengan melanjutkan, Anda menyetujui Syarat Layanan & Kebijakan Privasi Go Wapit",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600,
-                            fontFamily: 'Inter',
-                            height: 1.4,
+                          style: AppTokens.microLegal.copyWith(
+                            color: subTextColor,
                           ),
                         ),
                       ),
@@ -422,19 +375,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       height: 250,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
-        // Fallback 1: PNG illustration for that slide
         return Image.asset(
           fallbackImagePath,
           height: 230,
           fit: BoxFit.contain,
           errorBuilder: (context, err2, stack2) {
-            // Fallback 2: 3d_onboarding.png
             return Image.asset(
               'assets/images/3d_onboarding.png',
               height: 220,
               fit: BoxFit.contain,
               errorBuilder: (context, err3, stack3) {
-                // Fallback 3: Icon
                 return Container(
                   height: 180,
                   width: 180,

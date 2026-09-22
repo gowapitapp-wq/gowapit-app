@@ -46,6 +46,7 @@ class ApiCache {
   static const Duration layananUmumTTL = Duration(days: 7);
   static const Duration weatherTTL = Duration(minutes: 15);
   static const Duration userProfileTTL = Duration(seconds: 60);
+  static const Duration userTTL = userProfileTTL;
   static const Duration userVouchersTTL = Duration(minutes: 5);
   static const Duration slotTTL = Duration(seconds: 60);
   static const Duration ulasanTTL = Duration(minutes: 3);

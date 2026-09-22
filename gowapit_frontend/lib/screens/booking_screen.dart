@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../auth/auth_service.dart';
 import 'tiket_screen.dart';
 import 'login_screen.dart';
+import '../design/tokens.dart';
 
 class BookingScreen extends StatefulWidget {
   /// Jika [paket] diberikan, selector paket langsung pre-filled.
@@ -209,8 +210,7 @@ class _BookingScreenState extends State<BookingScreen> {
     if (kode.isEmpty) return;
     setState(() { _checkingVoucher = true; _voucherError = null; _voucherDiskon = null; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = await AuthService.instance.getToken();
       final Map<String, String> headers = {};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -243,8 +243,7 @@ class _BookingScreenState extends State<BookingScreen> {
   // ── Booking ───────────────────────────────────────────────────
   Future<void> _masukkanKeranjang() async {
     if (!_siapBooking) return;
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final token = await AuthService.instance.getToken();
     if (token == null || token.isEmpty) {
       if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       return;
@@ -365,7 +364,7 @@ class _BookingScreenState extends State<BookingScreen> {
         centerTitle: true,
         title: Text(
           "Pilih Paket",
-          style: TextStyle(color: text, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', fontSize: 18),
+          style: TextStyle(color: text, fontWeight: FontWeight.bold, fontFamily: AppTokens.fontFamily, fontSize: 18),
         ),
       ),
       body: Column(
@@ -443,7 +442,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: text,
-                                  fontFamily: 'Montserrat',
+                                  fontFamily: AppTokens.fontFamily,
                                 ),
                                 decoration: InputDecoration(
                                   isDense: true,
@@ -611,8 +610,8 @@ class _BookingScreenState extends State<BookingScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("Total", style: TextStyle(fontWeight: FontWeight.bold, color: text, fontFamily: 'Montserrat', fontSize: 15)),
-                              Text(_formatRupiah(_total), style: TextStyle(fontWeight: FontWeight.w800, color: _themeColor, fontFamily: 'Montserrat', fontSize: 18)),
+                              Text("Total", style: TextStyle(fontWeight: FontWeight.bold, color: text, fontFamily: AppTokens.fontFamily, fontSize: 15)),
+                              Text(_formatRupiah(_total), style: TextStyle(fontWeight: FontWeight.w800, color: _themeColor, fontFamily: AppTokens.fontFamily, fontSize: 18)),
                             ],
                           ),
                         ],
@@ -640,7 +639,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text("Total Bayar", style: TextStyle(fontSize: 11, color: sub, fontFamily: 'Inter')),
-                        Text(_formatRupiah(_total), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _themeColor, fontFamily: 'Montserrat')),
+                        Text(_formatRupiah(_total), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _themeColor, fontFamily: AppTokens.fontFamily)),
                       ],
                     ),
                   ),
@@ -673,7 +672,7 @@ class _BookingScreenState extends State<BookingScreen> {
                             children: [
                               Icon(Icons.shopping_cart_outlined, size: 18),
                               SizedBox(width: 8),
-                              Text("Masukkan Keranjang", style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text("Masukkan Keranjang", style: TextStyle(fontFamily: AppTokens.fontFamily, fontWeight: FontWeight.bold, fontSize: 14)),
                             ],
                           ),
                   ),
@@ -702,7 +701,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Widget _sectionLabel(String label, Color color) => Text(
         label,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color, fontFamily: 'Montserrat'),
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color, fontFamily: AppTokens.fontFamily),
       );
 
   Widget _buildPaketOption(Map<String, dynamic> p, bool dark, Color text, Color sub, Color divider) {
@@ -752,7 +751,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                       color: selected ? Colors.white : text,
-                      fontFamily: 'Montserrat',
+                      fontFamily: AppTokens.fontFamily,
                     ),
                   ),
                   Text(
@@ -796,7 +795,7 @@ class _BookingScreenState extends State<BookingScreen> {
               const SizedBox(width: 8),
               Text(
                 "Fasilitas Paket $nama",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: text, fontFamily: 'Montserrat'),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: text, fontFamily: AppTokens.fontFamily),
               ),
             ],
           ),
@@ -895,7 +894,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: TextStyle(
                     color: tc,
                     fontWeight: FontWeight.w700,
-                    fontFamily: 'Montserrat',
+                    fontFamily: AppTokens.fontFamily,
                     fontSize: 14,
                   ),
                 ),
@@ -996,7 +995,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: text,
-                fontFamily: 'Montserrat',
+                fontFamily: AppTokens.fontFamily,
               ),
             ),
             IconButton(
@@ -1141,7 +1140,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: fg,
-                        fontFamily: 'Montserrat',
+                        fontFamily: AppTokens.fontFamily,
                       ),
                     ),
                     const SizedBox(height: 1),
@@ -1162,7 +1161,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     fontSize: 13,
                     fontWeight: isStart || isEnd ? FontWeight.bold : FontWeight.w600,
                     color: fg,
-                    fontFamily: 'Montserrat',
+                    fontFamily: AppTokens.fontFamily,
                   ),
                 ),
         ),

@@ -22,6 +22,12 @@ dependencies:
   lottie: ^3.1.2
   qr_flutter: ^4.1.0
   mobile_scanner: ^6.0.4
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -41,9 +47,23 @@ flutter:
     - assets/images/6.png
     - assets/images/peta_wapit.png
     - assets/data_pariwisata.json
+    - assets/data_berita.json
     - assets/translations/
     - assets/lottie/
     - assets/lottie/detail cuaca/
+    - assets/fonts/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/api_config.dart';
 import '../config/api_cache.dart';
+import '../auth/auth_service.dart';
 
 class HubungiKamiScreen extends StatefulWidget {
   const HubungiKamiScreen({super.key});
@@ -15,11 +15,10 @@ class HubungiKamiScreen extends StatefulWidget {
 }
 
 class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _pesanController = TextEditingController();
-
-  final _formKey = GlobalKey<FormState>();
   bool _isSubmitting = false;
 
   @override
@@ -39,8 +38,7 @@ class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
   // Prefill otomatis nama & email pengguna jika sudah login
   Future<void> _loadUserPrefill() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await AuthService.instance.getToken();
       if (token != null) {
         final cached = ApiCache.instance.get("user_profile");
         if (cached is Map) {

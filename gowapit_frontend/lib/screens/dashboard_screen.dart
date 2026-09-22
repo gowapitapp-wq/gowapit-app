@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../auth/auth_service.dart';
 import 'login_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   Future _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token'); // Hapus sesi
+    await AuthService.instance.signOut();
 
     // Kembalikan ke halaman login
     if (context.mounted) {
