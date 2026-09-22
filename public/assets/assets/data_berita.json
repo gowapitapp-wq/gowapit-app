@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "kategori": "Promo",
+    "judul": "Diskon 30% Tiket Masuk Akhir Pekan",
+    "tanggal": "2026-09-18",
+    "ringkasan": "Nikmati potongan harga tiket masuk sebesar 30% untuk kunjungan akhir pekan ini bersama keluarga.",
+    "isi": "Kabar gembira untuk para petualang! Dapatkan potongan harga tiket masuk sebesar 30% untuk semua kategori tiket masuk ke kawasan Hutan Pinus Wapit. Promo ini berlaku spesial untuk menyambut liburan akhir pekan bersama keluarga dan sahabat tercinta. Nikmati keasrian pohon pinus, spot foto estetik, dan udara pegunungan yang sejuk di lereng Gunung Sindoro dengan harga lebih terjangkau.",
+    "gambar": "assets/images/BeritaDiskon.png",
+    "berlaku_hingga": "2026-10-31",
+    "todo": "KONFIRMASI KE PENGELOLA: batas berlaku Diskon 30%"
+  },
+  {
+    "id": 2,
+    "kategori": "Event",
+    "judul": "Festival Kopi Temanggung 2026",
+    "tanggal": "2026-09-15",
+    "ringkasan": "Nikmati seduhan kopi Arabika gratis dari petani lokal Jumprit di kawasan Hutan Pinus Wapit.",
+    "isi": "Saksikan dan ikuti semarak Festival Kopi Temanggung di Hutan Pinus Wapit! Pengunjung dapat mencicipi seduhan kopi Arabika khas lereng Sindoro-Sumbing secara gratis, mengikuti workshop manual brew & cupping bersama barista lokal, serta membeli biji kopi pilihan langsung dari kelompok tani Jumprit.",
+    "gambar": "assets/images/BeritaFestivalKopi.png",
+    "berlaku_hingga": "2026-10-15",
+    "todo": "KONFIRMASI KE PENGELOLA: tanggal pelaksanaan pasti Festival Kopi"
+  },
+  {
+    "id": 3,
+    "kategori": "Informasi",
+    "judul": "Wahana High Rope & Flying Fox Resmi Dibuka!",
+    "tanggal": "2026-09-10",
+    "ringkasan": "Uji adrenalin dan ketangkasanmu di wahana rintangan tali gantung terbaru Hutan Pinus Wapit.",
+    "isi": "Wahana High Rope & Flying Fox kini telah resmi dibuka untuk umum setelah melewati uji kelayakan dan sertifikasi keselamatan standar internasional. Pengunjung dapat menikmati sensasi melintasi titian tali di antara pepohonan pinus rindang dengan didampingi instruktur profesional dan perlengkapan pengaman lengkap (harness, helm, dan carabiner ganda).",
+    "gambar": "assets/images/HighRope.jpg",
+    "berlaku_hingga": null,
+    "todo": "KONFIRMASI KE PENGELOLA: tarif resmi wahana High Rope terpisah"
+  },
+  {
+    "id": 4,
+    "kategori": "Promo",
+    "judul": "Paket Camping Hemat & BBQ Hutan Pinus",
+    "tanggal": "2026-09-08",
+    "ringkasan": "Nikmati pengalaman bermalam di bawah bintang dengan fasilitas tenda dome lengkap dan paket BBQ hangat.",
+    "isi": "Ingin merasakan sensasi berkemah tanpa repot membawa perlengkapan? Paket Camping Hemat Hutan Pinus Wapit kini hadir dengan fasilitas lengkap: tenda dome kapasitas 4 orang, matras empuk, sleeping bag, lampu tenda, api unggun bersama, serta perlengkapan grill BBQ lengkap dengan jagung manis dan sosis panggang.",
+    "gambar": "assets/images/6.png",
+    "berlaku_hingga": "2026-11-30",
+    "todo": "KONFIRMASI KE PENGELOLA: ketersediaan slot camping akhir pekan"
+  },
+  {
+    "id": 5,
+    "kategori": "Pengumuman",
+    "judul": "Jam Operasional Kawasan Wisata 2026",
+    "tanggal": "2026-09-01",
+    "ringkasan": "Informasi jam buka dan tutup kawasan Hutan Pinus Wapit serta Mata Air Umbul Jumprit.",
+    "isi": "Kawasan Wisata Hutan Pinus Wapit dan Umbul Jumprit beroperasi setiap hari mulai pukul 07.30 WIB hingga 17.00 WIB. Loket tiket masuk dan layanan kasir ditutup pada pukul 16.30 WIB. Bagi pengunjung yang ingin berkemah (camping) atau mengadakan acara malam hari, wajib melakukan registrasi dan konfirmasi terlebih dahulu kepada petugas pengelola.",
+    "gambar": null,
+    "berlaku_hingga": null,
+    "todo": "KONFIRMASI KE PENGELOLA: jam operasional saat hari libur nasional"
+  },
+  {
+    "id": 6,
+    "kategori": "Pengumuman",
+    "judul": "Aturan & Tata Tertib Kunjungan Wisata",
+    "tanggal": "2026-08-25",
+    "ringkasan": "Panduan keselamatan, kebersihan, dan etika berkunjung di kawasan konservasi Hutan Pinus Wapit.",
+    "isi": "Demi menjaga kelestarian alam dan kenyamanan bersama, seluruh pengunjung diimbau untuk: (1) Membuang sampah pada tempat pemilahan yang telah disediakan, (2) Tidak menyalakan api unggun sembarangan tanpa pengawasan petugas, (3) Menjaga etika saat berinteraksi dengan satwa kera ekor panjang dan tidak memberi makanan berbahaya, serta (4) Menghormati kesucian area Mata Air Umbul Jumprit serta Makam Ki Jumprit.",
+    "gambar": null,
+    "berlaku_hingga": null,
+    "todo": "KONFIRMASI KE PENGELOLA: sanksi pelanggaran membuang sampah sembarangan"
+  },
+  {
+    "id": 7,
+    "kategori": "Event",
+    "judul": "Jadwal Pementasan Tari Wedok Tegowanuh",
+    "tanggal": "2026-08-20",
+    "ringkasan": "Pementasan kesenian tradisional khas Temanggung di panggung alam terbuka Hutan Pinus Wapit.",
+    "isi": "Nikmati keindahan tarian tradisional Tari Wedok Tegowanuh yang dibawakan oleh sanggar seni lokal Temanggung di panggung alam terbuka Hutan Pinus Wapit. Pementasan ini merupakan wujud pelestarian kearifan lokal budaya lereng Gunung Sindoro yang diselenggarakan setiap hari Minggu pagi.",
+    "gambar": null,
+    "berlaku_hingga": null,
+    "todo": "KONFIRMASI KE PENGELOLA: jadwal rutin pementasan bulanan"
+  },
+  {
+    "id": 8,
+    "kategori": "Informasi",
+    "judul": "Fasilitas Gazebo & Spot Istirahat Baru",
+    "tanggal": "2026-08-15",
+    "ringkasan": "Peningkatan kenyamanan pengunjung dengan penambahan 10 unit gazebo kayu estetik di area bukit pinus.",
+    "isi": "Pengelola Hutan Pinus Wapit telah menyelesaikan pembangunan 10 unit gazebo kayu baru yang tersebar di titik-titik teduh kawasan hutan pinus. Fasilitas ini dapat digunakan oleh seluruh pengunjung untuk beristirahat, bersantap santai, dan menikmati pemandangan alam secara gratis tanpa dipungut biaya tambahan.",
+    "gambar": "assets/images/3.png",
+    "berlaku_hingga": null,
+    "todo": "KONFIRMASI KE PENGELOLA: kapasitas maksimal per gazebo"
+  }
+]
