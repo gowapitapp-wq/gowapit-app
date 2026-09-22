@@ -55,7 +55,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
       final res = await http.get(
         ApiConfig.uri("/api/vouchers"),
-        headers: {"Authorization": "Bearer $token"},
+        headers: ApiConfig.headers(token: token, json: false),
       );
 
       if (res.statusCode == 200 && mounted) {
@@ -80,7 +80,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
       final res = await http.get(
         ApiConfig.uri("/api/referral/config"),
-        headers: {"Authorization": "Bearer $token"},
+        headers: ApiConfig.headers(token: token, json: false),
       );
 
       if (res.statusCode == 200 && mounted) {
@@ -117,10 +117,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
       final res = await http.put(
         ApiConfig.uri("/api/referral/config"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
+        headers: ApiConfig.headers(token: token),
         body: jsonEncode(body),
       );
 
@@ -177,7 +174,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
       final res = await http.delete(
         ApiConfig.uri("/api/vouchers/$voucherId"),
-        headers: {"Authorization": "Bearer $token"},
+        headers: ApiConfig.headers(token: token, json: false),
       );
 
       if (res.statusCode == 200 && mounted) {
@@ -402,13 +399,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                                   if (isEdit) {
                                     res = await http.put(
                                       ApiConfig.uri("/api/vouchers/${editVoucher['id']}"),
-                                      headers: {"Authorization": "Bearer $token", "Content-Type": "application/json"},
+                                      headers: ApiConfig.headers(token: token),
                                       body: jsonEncode(payload),
                                     );
                                   } else {
                                     res = await http.post(
                                       ApiConfig.uri("/api/vouchers"),
-                                      headers: {"Authorization": "Bearer $token", "Content-Type": "application/json"},
+                                      headers: ApiConfig.headers(token: token),
                                       body: jsonEncode(payload),
                                     );
                                   }

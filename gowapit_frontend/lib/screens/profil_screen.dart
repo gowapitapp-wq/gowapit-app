@@ -106,10 +106,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
       final response = await http.put(
         ApiConfig.uri("/api/users/me"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json"
-        },
+        headers: ApiConfig.headers(token: token),
         body: jsonEncode({
           "nama_lengkap": newName,
           "foto_profil": newPhotoBase64,
@@ -756,10 +753,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
                                 final res = await http.post(
                                   ApiConfig.uri("/api/referral/use"),
-                                  headers: {
-                                    "Authorization": "Bearer $token",
-                                    "Content-Type": "application/json",
-                                  },
+                                  headers: ApiConfig.headers(token: token),
                                   body: jsonEncode({"kode_referral": kode}),
                                 );
 

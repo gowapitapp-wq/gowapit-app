@@ -211,10 +211,7 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() { _checkingVoucher = true; _voucherError = null; _voucherDiskon = null; });
     try {
       final token = await AuthService.instance.getToken();
-      final Map<String, String> headers = {};
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+      final headers = ApiConfig.headers(token: token, json: false);
 
       final res = await http.get(
         ApiConfig.uri('/api/voucher/$kode?subtotal=$_subtotal'),
@@ -259,7 +256,7 @@ class _BookingScreenState extends State<BookingScreen> {
       };
       final res = await http.post(
         ApiConfig.uri('/api/booking'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: ApiConfig.headers(token: token),
         body: jsonEncode(body),
       );
       if (!mounted) return;

@@ -119,9 +119,7 @@ class _HubungiKamiScreenState extends State<HubungiKamiScreen> {
     try {
       final response = await http.post(
         ApiConfig.uri("/api/pesan"),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: ApiConfig.headers(),
         body: jsonEncode({
           "nama": nama,
           "email": email,

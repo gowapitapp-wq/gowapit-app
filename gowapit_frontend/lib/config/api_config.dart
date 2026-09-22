@@ -23,7 +23,7 @@ class ApiConfig {
         }
       } catch (_) {}
     }
-    return "http://157.10.161.228";
+    return "https://late-loops-scream.loca.lt";
   }
 
   /// Mengubah Base URL secara dinamis jika diperlukan
@@ -55,6 +55,17 @@ class ApiConfig {
   /// String URL sederhana
   static String urlString(String path) {
     return uri(path).toString();
+  }
+
+  /// Header standar untuk HTTP request (termasuk bypass warning localtunnel & JSON headers)
+  static Map<String, String> headers({Map<String, String>? extra, String? token, bool json = true}) {
+    final Map<String, String> h = {
+      if (json) 'Content-Type': 'application/json',
+      'Bypass-Tunnel-Reminder': 'true',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      ...?extra,
+    };
+    return h;
   }
 
   /// Mengekstrak pesan error secara aman dari respon API backend (menangani String, Map, atau List FastAPI 422)

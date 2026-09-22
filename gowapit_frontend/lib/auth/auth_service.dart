@@ -83,6 +83,7 @@ class AuthService {
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer $idToken",
+            "Bypass-Tunnel-Reminder": "true",
           },
           body: jsonEncode(bodyData),
         );

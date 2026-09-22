@@ -169,7 +169,11 @@ class ApiCache {
 
     // Request ke server
     try {
-      final response = await http.get(uri, headers: headers);
+      final effectiveHeaders = {
+        ...?headers,
+        "Bypass-Tunnel-Reminder": "true",
+      };
+      final response = await http.get(uri, headers: effectiveHeaders);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final data = decoded is Map && decoded.containsKey('data') ? decoded['data'] : decoded;

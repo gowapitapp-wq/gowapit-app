@@ -402,10 +402,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     try {
       final response = await http.post(
         ApiConfig.uri("/api/destinasi/$destId/ulasan"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $_jwtToken",
-        },
+        headers: ApiConfig.headers(token: _jwtToken),
         body: jsonEncode({
           "rating": _selectedRating,
           "ulasan": _reviewController.text.trim(),
@@ -470,9 +467,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     try {
       final response = await http.delete(
         ApiConfig.uri("/api/destinasi/$destId/ulasan"),
-        headers: {
-          "Authorization": "Bearer $_jwtToken",
-        },
+        headers: ApiConfig.headers(token: _jwtToken, json: false),
       );
 
       if (mounted) {
@@ -1490,10 +1485,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
                               try {
                                 final res = await http.post(
                                   ApiConfig.uri("/api/destinasi/$destId/ulasan/$ulasanId/balasan"),
-                                  headers: {
-                                    "Authorization": "Bearer $_jwtToken",
-                                    "Content-Type": "application/json",
-                                  },
+                                  headers: ApiConfig.headers(token: _jwtToken),
                                   body: jsonEncode({"balasan": text}),
                                 );
 
@@ -1557,7 +1549,7 @@ class _DetailDestinasiPageState extends State<DetailDestinasiPage> {
     try {
       final res = await http.delete(
         ApiConfig.uri("/api/destinasi/$destId/ulasan/$ulasanId/balasan"),
-        headers: {"Authorization": "Bearer $_jwtToken"},
+        headers: ApiConfig.headers(token: _jwtToken, json: false),
       );
 
       if (res.statusCode == 200 && mounted) {

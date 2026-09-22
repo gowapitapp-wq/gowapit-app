@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://157.10.161.228/api/:path*"
+      "destination": "https://late-loops-scream.loca.lt/api/:path*"
     },
     {
       "source": "/docs",
-      "destination": "http://157.10.161.228/docs"
+      "destination": "https://late-loops-scream.loca.lt/docs"
     },
     {
       "source": "/openapi.json",
-      "destination": "http://157.10.161.228/openapi.json"
+      "destination": "https://late-loops-scream.loca.lt/openapi.json"
     },
     {
       "source": "/(.*)",

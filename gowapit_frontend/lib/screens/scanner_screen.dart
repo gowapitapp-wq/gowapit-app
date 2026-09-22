@@ -152,10 +152,10 @@ class _ScannerScreenState extends State<ScannerScreen>
     });
 
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/api/tickets/validate');
+      final url = ApiConfig.uri('/api/tickets/validate');
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: ApiConfig.headers(),
         body: jsonEncode({'ticket_code': cleanCode}),
       );
 
@@ -189,16 +189,10 @@ class _ScannerScreenState extends State<ScannerScreen>
 
     try {
       final token = await AuthService.instance.getToken();
-
-      final headers = {'Content-Type': 'application/json'};
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final url = Uri.parse('${ApiConfig.baseUrl}/api/tickets/redeem');
+      final url = ApiConfig.uri('/api/tickets/redeem');
       final response = await http.post(
         url,
-        headers: headers,
+        headers: ApiConfig.headers(token: token),
         body: jsonEncode({'ticket_code': code}),
       );
 

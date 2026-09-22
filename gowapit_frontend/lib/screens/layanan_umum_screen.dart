@@ -25,7 +25,7 @@ class _LayananUmumPageState extends State<LayananUmumPage> {
   Future<void> _fetchLayananData() async {
     try {
       // 1. Coba ambil data dari API Backend
-      final response = await http.get(ApiConfig.uri("/api/layanan-umum"));
+      final response = await http.get(ApiConfig.uri("/api/layanan-umum"), headers: ApiConfig.headers(json: false));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['data'] != null && (data['data'] as List).isNotEmpty && mounted) {

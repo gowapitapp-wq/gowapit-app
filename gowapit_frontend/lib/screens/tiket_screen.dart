@@ -53,9 +53,7 @@ class _TiketPageState extends State<TiketPage> {
       // 2. Fetch data terbaru dari Backend
       final res = await http.get(
         ApiConfig.uri('/api/tickets/my'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: ApiConfig.headers(token: token, json: false),
       ).timeout(const Duration(seconds: 5));
 
       if (res.statusCode == 200 && mounted) {
@@ -82,9 +80,7 @@ class _TiketPageState extends State<TiketPage> {
 
       final res = await http.get(
         ApiConfig.uri('/api/booking'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: ApiConfig.headers(token: token, json: false),
       );
 
       if (res.statusCode == 200 && mounted) {
@@ -205,10 +201,7 @@ class _TiketPageState extends State<TiketPage> {
           try {
             final payRes = await http.post(
               ApiConfig.uri('/api/booking/$bookingId/pay'),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
+              headers: ApiConfig.headers(token: token),
               body: jsonEncode({
                 'mode': isSimulasi ? 'simulasi' : 'midtrans',
               }),
@@ -257,10 +250,7 @@ class _TiketPageState extends State<TiketPage> {
         try {
           final kRes = await http.post(
             ApiConfig.uri('/api/kuliner/orders'),
-            headers: {
-              'Content-Type': 'application/json',
-              if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-            },
+            headers: ApiConfig.headers(token: token),
             body: jsonEncode({
               'items': kulinerPayloadItems,
               'total_harga': totalKulinerHarga,
@@ -288,7 +278,7 @@ class _TiketPageState extends State<TiketPage> {
             };
             final response = await http.post(
               ApiConfig.uri('/api/checkout'),
-              headers: {'Content-Type': 'application/json'},
+              headers: ApiConfig.headers(),
               body: jsonEncode(orderData),
             );
             if (response.statusCode == 200) {
@@ -671,7 +661,7 @@ class _TiketPageState extends State<TiketPage> {
                             try {
                               await http.delete(
                                 ApiConfig.uri('/api/booking/${item['booking_id']}'),
-                                headers: {'Authorization': 'Bearer $token'},
+                                headers: ApiConfig.headers(token: token, json: false),
                               );
                             } catch (_) {}
                           }
