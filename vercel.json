@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://late-loops-scream.loca.lt/api/:path*"
+      "destination": "https://lucky-badgers-sort.loca.lt/api/:path*"
     },
     {
       "source": "/docs",
-      "destination": "https://late-loops-scream.loca.lt/docs"
+      "destination": "https://lucky-badgers-sort.loca.lt/docs"
     },
     {
       "source": "/openapi.json",
-      "destination": "https://late-loops-scream.loca.lt/openapi.json"
+      "destination": "https://lucky-badgers-sort.loca.lt/openapi.json"
     },
     {
       "source": "/(.*)",

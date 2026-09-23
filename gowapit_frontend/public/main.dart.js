@@ -36811,7 +36811,7 @@ return new A.ln(q,s,r,p,A.b4i(a))},
 aiW(){var s,r
 try{s=A.a4H().gC2()
 if(J.c2(s)!==0&&!J.bmw(s,"file://")){if(J.pE(s,"localhost")||J.pE(s,"127.0.0.1"))return"http://127.0.0.1:8000"
-return s}}catch(r){}return"https://late-loops-scream.loca.lt"},
+return s}}catch(r){}return"https://lucky-badgers-sort.loca.lt"},
 cV(a){var s=B.c.iC(A.aiW(),"/")?B.c.a0(A.aiW(),0,A.aiW().length-1):A.aiW()
 return A.eo(s+(B.c.bD(a,"/")?a:"/"+a),0,null)},
 eF(a,b){var s=t.N

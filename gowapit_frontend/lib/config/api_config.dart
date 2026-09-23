@@ -23,7 +23,7 @@ class ApiConfig {
         }
       } catch (_) {}
     }
-    return "https://late-loops-scream.loca.lt";
+    return "https://lucky-badgers-sort.loca.lt";
   }
 
   /// Mengubah Base URL secara dinamis jika diperlukan
