@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://lucky-badgers-sort.loca.lt/api/:path*"
+      "destination": "https://slightly-great-equal-bailey.trycloudflare.com/api/:path*"
     },
     {
       "source": "/docs",
-      "destination": "https://lucky-badgers-sort.loca.lt/docs"
+      "destination": "https://slightly-great-equal-bailey.trycloudflare.com/docs"
     },
     {
       "source": "/openapi.json",
-      "destination": "https://lucky-badgers-sort.loca.lt/openapi.json"
+      "destination": "https://slightly-great-equal-bailey.trycloudflare.com/openapi.json"
     },
     {
       "source": "/(.*)",

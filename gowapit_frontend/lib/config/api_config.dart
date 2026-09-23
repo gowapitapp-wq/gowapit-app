@@ -23,7 +23,7 @@ class ApiConfig {
         }
       } catch (_) {}
     }
-    return "https://lucky-badgers-sort.loca.lt";
+    return "https://slightly-great-equal-bailey.trycloudflare.com";
   }
 
   /// Mengubah Base URL secara dinamis jika diperlukan
